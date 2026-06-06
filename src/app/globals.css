@@ -259,6 +259,9 @@
 /* Smooth transitions for theme changes */
 html {
   transition: color-scheme 0.3s ease;
+}
+
+body {
   overflow-x: hidden;
 }
 

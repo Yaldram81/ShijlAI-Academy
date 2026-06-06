@@ -1241,7 +1241,7 @@ export function CoursePlayerView() {
                                 )}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-[12px] font-semibold text-foreground truncate">
+                                <p className="text-[12px] font-semibold text-foreground line-clamp-2 leading-snug pr-2">
                                   Module {mod.order}: {mod.title}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -1315,7 +1315,7 @@ export function CoursePlayerView() {
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <p className={cn(
-                                      'truncate text-[13px]',
+                                      'line-clamp-2 leading-snug text-[13px] pr-1',
                                       isCurrent ? 'font-semibold' : 'font-medium'
                                     )}>
                                       {lesson.title}
@@ -1406,13 +1406,13 @@ export function CoursePlayerView() {
         </aside>
 
         {/* ─── RIGHT: Video + Tabs ─────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 overflow-hidden border border-border/40 bg-card/80 backdrop-blur-xl shadow-sm rounded-3xl flex flex-col">
+        <div className="flex-1 min-w-0 overflow-y-auto border border-border/40 bg-card/80 backdrop-blur-xl shadow-sm rounded-3xl flex flex-col scrollbar-thin">
           {/* ═══════════════════════════════════════════════════════════════
               VIDEO PLAYER
               ═══════════════════════════════════════════════════════════════ */}
           <div
             ref={playerRef}
-            className="relative bg-black aspect-video w-full overflow-hidden group"
+            className="relative bg-black aspect-video w-full shrink-0 overflow-hidden group rounded-b-3xl shadow-sm border-b border-border/40"
             onMouseMove={resetControlsTimer}
             onMouseLeave={() => isPlaying && setShowControls(false)}
           >
