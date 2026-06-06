@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { PublicNav } from '@/components/public-nav'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  Monitor, Briefcase, Palette, MessageCircle, Microscope, Tv, Book, FileText, Globe2, Cloud, Code, LayoutTemplate, Terminal, Library,
   Search,
   Star,
   Heart,
@@ -155,38 +156,21 @@ const categoryGradients: Record<string, string> = {
   Python: 'from-amber-500 to-teal-600',
 }
 
-const categoryEmojis: Record<string, string> = {
-  Tech: '\u{1F4BB}',
-  Business: '\u{1F4BC}',
-  Design: '\u{1F3A8}',
-  Language: '\u{1F5E3}',
-  Sciences: '\u{1F52C}',
-  Arts: '\u{1F3AD}',
-  IB: '\u{1F4DA}',
-  'O-Levels': '\u{1F3EB}',
-  'A-Levels': '\u{1F393}',
-  IELTS: '\u{1F30D}',
-  AWS: '\u{2601}',
-  Programming: '\u{1F4BB}',
-  'Web Dev': '\u{1F310}',
-  Python: '\u{1F40D}',
-}
-
-const categoryIcons: Record<string, string> = {
-  IB: '\u{1F4DA}',
-  'O-Levels': '\u{1F3EB}',
-  'A-Levels': '\u{1F393}',
-  IELTS: '\u{1F30D}',
-  AWS: '\u{2601}',
-  Programming: '\u{1F4BB}',
-  Tech: '\u{1F4BB}',
-  Business: '\u{1F4BC}',
-  Design: '\u{1F3A8}',
-  Language: '\u{1F5E3}',
-  Sciences: '\u{1F52C}',
-  Arts: '\u{1F3AD}',
-  'Web Dev': '\u{1F310}',
-  Python: '\u{1F40D}',
+const categoryIcons: Record<string, any> = {
+  Tech: Monitor,
+  Business: Briefcase,
+  Design: Palette,
+  Language: MessageCircle,
+  Sciences: Microscope,
+  Arts: Tv,
+  IB: Book,
+  'O-Levels': FileText,
+  'A-Levels': GraduationCap,
+  IELTS: Globe2,
+  AWS: Cloud,
+  Programming: Code,
+  'Web Dev': LayoutTemplate,
+  Python: Terminal,
 }
 
 const levelColors: Record<string, string> = {
@@ -791,7 +775,7 @@ function CourseCardGrid({
 }) {
   const { enrollments } = useAppStore()
   const gradient = categoryGradients[course.category] || 'from-emerald-500 to-teal-600'
-  const emoji = categoryEmojis[course.category] || '\u{1F4D6}'
+  const IconComponent = categoryIcons[course.category] || BookOpen
   const isEnrolled = course.isEnrolled || enrollments.some((e) => e.courseId === course.id)
   const enrollmentCount = course._count?.enrollments ?? course.enrollmentCount ?? 0
   const badge = getCourseBadge(course)
@@ -843,7 +827,7 @@ function CourseCardGrid({
             </div>
           ) : (
             <div className={cn('flex h-full w-full items-center justify-center bg-gradient-to-br relative', gradient)}>
-              <span className="text-5xl opacity-40 select-none">{emoji}</span>
+              <IconComponent className="size-12 opacity-40 select-none text-white/50" strokeWidth={1.5} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
               <div className="absolute top-4 right-4 size-20 rounded-full bg-white/10 blur-xl" />
               <div className="absolute bottom-8 left-4 size-16 rounded-full bg-white/10 blur-lg" />
@@ -852,7 +836,7 @@ function CourseCardGrid({
 
           {/* Category badge */}
           <span className="absolute left-12 top-3 rounded-full bg-white/90 dark:bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold text-foreground backdrop-blur-sm flex items-center gap-1 z-10">
-            <span className="text-[10px]">{emoji}</span>
+            <IconComponent className="size-3 text-white/80" strokeWidth={2} />
             {course.category}
           </span>
 
@@ -1029,7 +1013,7 @@ function CourseCardList({
 }) {
   const { enrollments } = useAppStore()
   const gradient = categoryGradients[course.category] || 'from-emerald-500 to-teal-600'
-  const emoji = categoryEmojis[course.category] || '\u{1F4D6}'
+  const IconComponent = categoryIcons[course.category] || BookOpen
   const isEnrolled = course.isEnrolled || enrollments.some((e) => e.courseId === course.id)
   const enrollmentCount = course._count?.enrollments ?? course.enrollmentCount ?? 0
   const badge = getCourseBadge(course)
@@ -1081,7 +1065,7 @@ function CourseCardList({
             </div>
           ) : (
             <div className={cn('flex h-full w-full items-center justify-center bg-gradient-to-br', gradient)}>
-              <span className="text-3xl opacity-40 select-none">{emoji}</span>
+              <IconComponent className="size-8 opacity-40 select-none text-white/50" strokeWidth={1.5} />
             </div>
           )}
           <span className="absolute left-2 top-2 rounded-full bg-white/90 dark:bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
@@ -1234,7 +1218,7 @@ function QuickPreviewDialog({
   if (!course) return null
 
   const gradient = categoryGradients[course.category] || 'from-emerald-500 to-teal-600'
-  const emoji = categoryEmojis[course.category] || '\u{1F4D6}'
+  const IconComponent = categoryIcons[course.category] || BookOpen
   const enrollmentCount = course._count?.enrollments ?? course.enrollmentCount ?? 0
   const moduleCount = course._count?.modules ?? 0
   const badge = getCourseBadge(course)
@@ -1252,7 +1236,7 @@ function QuickPreviewDialog({
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
           <div className="absolute top-4 right-4 size-24 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute bottom-4 left-6 size-16 rounded-full bg-white/10 blur-xl" />
-          <span className="text-4xl opacity-30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none">{emoji}</span>
+          <IconComponent className="size-10 opacity-30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-white/50" strokeWidth={1.5} />
           <DialogHeader className="absolute bottom-4 left-6 right-6">
             <DialogTitle className="text-white text-[17px] font-bold leading-snug line-clamp-2 drop-shadow-md">
               {course.title}
@@ -1464,7 +1448,10 @@ function CompareDialog({
                   <th key={c.id} className="text-center p-3 min-w-[160px]">
                     <div className="space-y-2">
                       <div className={cn('mx-auto flex size-12 items-center justify-center rounded-xl bg-gradient-to-br', categoryGradients[c.category] || 'from-emerald-500 to-teal-600')}>
-                        <span className="text-xl">{categoryEmojis[c.category] || '\u{1F4D6}'}</span>
+                        {(() => {
+                          const CatIcon = categoryIcons[c.category] || BookOpen
+                          return <CatIcon className="size-5" />
+                        })()}
                       </div>
                       <p className="text-[13px] font-semibold text-foreground line-clamp-2 leading-tight">{c.title}</p>
                       <button
@@ -1565,7 +1552,10 @@ function CompareFloatingBar({
                 'flex size-10 items-center justify-center rounded-xl border-2 border-card bg-gradient-to-br text-sm',
                 categoryGradients[c.category] || 'from-emerald-500 to-teal-600'
               )}>
-                <span className="text-[10px]">{categoryEmojis[c.category] || '\u{1F4D6}'}</span>
+                {(() => {
+                    const CatIcon = categoryIcons[c.category] || BookOpen
+                    return <CatIcon className="size-3" />
+                  })()}
               </div>
               <button
                 onClick={() => onRemove(c.id)}
@@ -2066,7 +2056,7 @@ export function PublicCoursesView() {
       <PublicNav activeView="public-courses" />
 
       {/* ═══ Hero Section ═══ */}
-      <section className="relative overflow-hidden py-12 sm:py-16">
+      <section className="relative overflow-hidden py-6 sm:py-8">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50/30 to-transparent dark:from-emerald-950/20 dark:via-teal-950/10 dark:to-transparent" />
         {/* Decorative shapes */}
         <div className="absolute top-8 right-12 size-40 rounded-full bg-emerald-200/30 dark:bg-emerald-800/10 blur-3xl" />
@@ -2100,7 +2090,7 @@ export function PublicCoursesView() {
             </p>
 
             {/* Advanced Search Bar */}
-            <div className="mt-6 max-w-2xl mx-auto relative">
+            <div className="mt-4 max-w-2xl mx-auto relative">
               <div className={cn(
                 'relative rounded-2xl transition-all duration-300',
                 searchFocused
@@ -2247,7 +2237,7 @@ export function PublicCoursesView() {
       {/* ═══ Combined Layout: Filter Sidebar + Content ═══ */}
       <section className="flex-1 py-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex gap-6">
+          <div className="flex gap-4">
             {/* Desktop Filter Sidebar */}
             <aside className="hidden lg:block w-56 shrink-0 self-start sticky top-16 z-10">
               <div className="max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin rounded-2xl bg-card ios-shadow-sm p-4">
@@ -2288,14 +2278,14 @@ export function PublicCoursesView() {
                           : 'bg-card border-border/30 hover:border-primary/30 text-muted-foreground'
                       )}
                     >
-                      <span className="text-xl">📚</span>
+                      <Library className="size-5" />
                       <span className="text-[11px] font-semibold">All</span>
                     </motion.button>
 
                     {/* Category cards */}
                     {categoryData.map((cat) => {
                       const gradient = categoryGradients[cat.name] || 'from-emerald-500 to-teal-600'
-                      const icon = categoryIcons[cat.name] || cat.icon || '📖'
+                      const IconComponent = categoryIcons[cat.name] || BookOpen
                       const isActive = filters.categories.includes(cat.name)
                       return (
                         <motion.button
@@ -2316,7 +2306,7 @@ export function PublicCoursesView() {
                               : 'bg-card border-border/30 hover:border-primary/30 text-muted-foreground'
                           )}
                         >
-                          <span className="text-xl">{icon}</span>
+                          <IconComponent className="size-5" />
                           <span className="text-[11px] font-semibold">{cat.name}</span>
                           <span className={cn(
                             'text-[10px] tabular-nums',
