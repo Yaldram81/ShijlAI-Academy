@@ -1,0 +1,636 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+/* ─── Custom Brand Fonts ─── */
+@font-face {
+  font-family: 'ScriptMTBold';
+  src: url('/fonts/SCRIPTBL.TTF') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LatinModernRoman';
+  src: url('/fonts/lmroman10-regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-emerald-50: oklch(0.979 0.021 166.113);
+  --color-emerald-100: oklch(0.950 0.052 163.051);
+  --color-emerald-200: oklch(0.905 0.093 164.15);
+  --color-emerald-300: oklch(0.845 0.143 164.978);
+  --color-emerald-400: oklch(0.765 0.177 163.223);
+  --color-emerald-500: oklch(0.696 0.17 162.48);
+  --color-emerald-600: oklch(0.596 0.145 163.225);
+  --color-emerald-700: oklch(0.508 0.118 165.612);
+  --color-emerald-800: oklch(0.432 0.095 166.913);
+  --color-emerald-900: oklch(0.378 0.077 168.94);
+  --color-teal-50: oklch(0.984 0.019 180.503);
+  --color-teal-100: oklch(0.953 0.047 175.993);
+  --color-teal-200: oklch(0.911 0.086 172.754);
+  --color-teal-300: oklch(0.855 0.131 170.385);
+  --color-teal-400: oklch(0.777 0.152 168.029);
+  --color-teal-500: oklch(0.704 0.143 169.424);
+  --color-teal-600: oklch(0.600 0.118 168.029);
+  --color-teal-700: oklch(0.511 0.095 168.658);
+  --color-teal-800: oklch(0.437 0.077 169.347);
+  --color-teal-900: oklch(0.386 0.063 170.073);
+}
+
+/* iOS-inspired light theme */
+:root {
+  --radius: 1rem;
+  --background: oklch(0.97 0.003 166);
+  --foreground: oklch(0.15 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 260);
+  --primary: oklch(0.596 0.145 163.225);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.015 166);
+  --secondary-foreground: oklch(0.3 0.06 163);
+  --muted: oklch(0.95 0.015 166);
+  --muted-foreground: oklch(0.55 0.02 260);
+  --accent: oklch(0.93 0.04 163);
+  --accent-foreground: oklch(0.3 0.06 163);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.91 0.01 166);
+  --input: oklch(0.91 0.01 166);
+  --ring: oklch(0.596 0.145 163.225);
+  --chart-1: oklch(0.596 0.145 163.225);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.845 0.143 164.978);
+  --chart-4: oklch(0.704 0.143 169.424);
+  --chart-5: oklch(0.432 0.095 166.913);
+  --sidebar: oklch(0.98 0.005 166);
+  --sidebar-foreground: oklch(0.15 0.01 260);
+  --sidebar-primary: oklch(0.596 0.145 163.225);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.93 0.04 163);
+  --sidebar-accent-foreground: oklch(0.3 0.06 163);
+  --sidebar-border: oklch(0.91 0.01 166);
+  --sidebar-ring: oklch(0.596 0.145 163.225);
+}
+
+/* iOS-inspired dark theme */
+.dark {
+  --background: oklch(0.13 0.01 260);
+  --foreground: oklch(0.97 0.005 166);
+  --card: oklch(0.18 0.015 260);
+  --card-foreground: oklch(0.97 0.005 166);
+  --popover: oklch(0.18 0.015 260);
+  --popover-foreground: oklch(0.97 0.005 166);
+  --primary: oklch(0.696 0.17 162.48);
+  --primary-foreground: oklch(0.13 0.01 260);
+  --secondary: oklch(0.24 0.02 260);
+  --secondary-foreground: oklch(0.97 0.005 166);
+  --muted: oklch(0.24 0.02 260);
+  --muted-foreground: oklch(0.68 0.015 260);
+  --accent: oklch(0.24 0.03 163);
+  --accent-foreground: oklch(0.93 0.04 163);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.696 0.17 162.48);
+  --chart-1: oklch(0.696 0.17 162.48);
+  --chart-2: oklch(0.845 0.143 164.978);
+  --chart-3: oklch(0.765 0.177 163.223);
+  --chart-4: oklch(0.704 0.143 169.424);
+  --chart-5: oklch(0.508 0.118 165.612);
+  --sidebar: oklch(0.16 0.012 260);
+  --sidebar-foreground: oklch(0.97 0.005 166);
+  --sidebar-primary: oklch(0.696 0.17 162.48);
+  --sidebar-primary-foreground: oklch(0.13 0.01 260);
+  --sidebar-accent: oklch(0.24 0.03 163);
+  --sidebar-accent-foreground: oklch(0.93 0.04 163);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.696 0.17 162.48);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* iOS-style frosted glass */
+.ios-glass {
+  background: oklch(1 0 0 / 72%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.dark .ios-glass {
+  background: oklch(0.16 0.012 260 / 72%);
+}
+
+.ios-glass-thick {
+  background: oklch(1 0 0 / 85%);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+}
+
+.dark .ios-glass-thick {
+  background: oklch(0.16 0.012 260 / 85%);
+}
+
+/* iOS-style card shadow */
+.ios-shadow {
+  box-shadow: 
+    0 0 0 0.5px oklch(0.7 0.01 166 / 20%),
+    0 2px 8px oklch(0.5 0.05 166 / 8%),
+    0 8px 24px oklch(0.5 0.05 166 / 4%);
+}
+
+.dark .ios-shadow {
+  box-shadow: 
+    0 0 0 0.5px oklch(1 0 0 / 8%),
+    0 2px 8px oklch(0 0 0 / 20%),
+    0 8px 24px oklch(0 0 0 / 10%);
+}
+
+.ios-shadow-sm {
+  box-shadow: 
+    0 0 0 0.5px oklch(0.7 0.01 166 / 15%),
+    0 1px 4px oklch(0.5 0.05 166 / 5%);
+}
+
+.dark .ios-shadow-sm {
+  box-shadow: 
+    0 0 0 0.5px oklch(1 0 0 / 6%),
+    0 1px 4px oklch(0 0 0 / 12%);
+}
+
+.ios-shadow-lg {
+  box-shadow: 
+    0 0 0 0.5px oklch(0.7 0.01 166 / 20%),
+    0 4px 16px oklch(0.5 0.05 166 / 12%),
+    0 16px 48px oklch(0.5 0.05 166 / 6%);
+}
+
+.dark .ios-shadow-lg {
+  box-shadow: 
+    0 0 0 0.5px oklch(1 0 0 / 8%),
+    0 4px 16px oklch(0 0 0 / 25%),
+    0 16px 48px oklch(0 0 0 / 12%);
+}
+
+/* iOS-style scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Smooth transitions for theme changes */
+html {
+  transition: color-scheme 0.3s ease;
+  overflow-x: hidden;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* XP progress bar glow effect */
+.xp-glow {
+  box-shadow: 0 0 12px oklch(0.696 0.17 162.48 / 0.5);
+}
+
+.dark .xp-glow {
+  box-shadow: 0 0 12px oklch(0.696 0.17 162.48 / 0.35);
+}
+
+/* Streak fire animation */
+@keyframes fire-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.streak-fire {
+  animation: fire-pulse 1.5s ease-in-out infinite;
+}
+
+/* iOS-style active tab indicator */
+.ios-tab-active {
+  position: relative;
+}
+
+.ios-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: oklch(0.596 0.145 163.225);
+}
+
+.dark .ios-tab-active::after {
+  background: oklch(0.696 0.17 162.48);
+}
+
+/* iOS spring animation */
+.ios-spring {
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* iOS haptic-like press */
+.ios-press:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* iOS bottom safe area */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* iOS-status bar spacing */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ===== Landing Page Animations ===== */
+
+/* Animated gradient mesh background */
+@keyframes gradient-mesh {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+.animate-gradient-mesh {
+  background-size: 400% 400%;
+  animation: gradient-mesh 15s ease infinite;
+}
+
+/* Animated gradient shift for CTA */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Subtle float animation */
+@keyframes subtle-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: subtle-float 4s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: subtle-float 4s ease-in-out 1s infinite;
+}
+
+.animate-float-slow {
+  animation: subtle-float 6s ease-in-out infinite;
+}
+
+/* Pulse glow for live indicators */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 oklch(0.596 0.145 163.225 / 40%); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px oklch(0.596 0.145 163.225 / 0%); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Rotating gradient ring */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Smooth scroll for landing page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Gradient border card technique */
+.gradient-border-card {
+  position: relative;
+  background: var(--card);
+  border-radius: 1rem;
+}
+
+.gradient-border-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, oklch(0.696 0.17 162.48), oklch(0.704 0.143 169.424), oklch(0.696 0.17 162.48 / 0%));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.dark .gradient-border-card::before {
+  background: linear-gradient(135deg, oklch(0.696 0.17 162.48 / 60%), oklch(0.704 0.143 169.424 / 60%), oklch(0.696 0.17 162.48 / 0%));
+}
+
+/* Glow effect for buttons */
+.btn-glow {
+  box-shadow: 0 0 20px oklch(0.696 0.17 162.48 / 25%), 0 0 40px oklch(0.696 0.17 162.48 / 10%);
+  transition: box-shadow 0.3s ease;
+}
+
+.btn-glow:hover {
+  box-shadow: 0 0 30px oklch(0.696 0.17 162.48 / 40%), 0 0 60px oklch(0.696 0.17 162.48 / 15%);
+}
+
+/* iOS message bubble */
+.ios-bubble {
+  border-radius: 20px;
+  border-bottom-left-radius: 6px;
+}
+
+.ios-bubble-right {
+  border-radius: 20px;
+  border-bottom-right-radius: 6px;
+}
+
+/* Icon background pulse */
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.icon-bg-pulse {
+  animation: icon-pulse 3s ease-in-out infinite;
+}
+
+/* Subtle pulse for critical alerts */
+@keyframes pulse-subtle {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.dark .animate-pulse-subtle {
+  animation: pulse-subtle-dark 3s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle-dark {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25); }
+}
+
+/* ===== ShijlAI Animated Logo — Neural Book Core ===== */
+
+/* Core glow pulse — intelligence core breathing */
+@keyframes shijlai-core-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.08); }
+}
+
+/* Neural node pulse — nodes subtly glow in sequence */
+@keyframes shijlai-node-pulse {
+  0%, 100% { opacity: 1; r: 2.5; }
+  50%      { opacity: 0.8; r: 3; }
+}
+
+@keyframes shijlai-node-pulse-sm {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.65; }
+}
+
+/* Neural structure subtle breathing — the brain "thinks" */
+@keyframes shijlai-neural-breathe {
+  0%, 100% { transform: perspective(200px) scale(1); }
+  50%      { transform: perspective(200px) scale(1.03); }
+}
+
+/* Orbit ring rotation */
+@keyframes shijlai-orbit-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── Animation Applications ─── */
+
+/* Core glow pulse */
+.shijlai-logo--animated .shijlai-logo__core-glow {
+  animation: shijlai-core-pulse 4s ease-in-out infinite;
+}
+
+/* Neural structure breathing */
+.shijlai-logo--animated .shijlai-logo__neural {
+  animation: shijlai-neural-breathe 5s ease-in-out infinite;
+}
+
+/* Core node pulse */
+.shijlai-logo--animated .shijlai-logo__node--core {
+  animation: shijlai-node-pulse 3s ease-in-out infinite;
+}
+
+/* Apex node pulse — delayed */
+.shijlai-logo--animated .shijlai-logo__node--apex {
+  animation: shijlai-node-pulse-sm 3s ease-in-out 0.5s infinite;
+}
+
+/* Convergence node pulse — delayed */
+.shijlai-logo--animated .shijlai-logo__node--converge {
+  animation: shijlai-node-pulse-sm 3s ease-in-out 1s infinite;
+}
+
+/* Orbit group slow rotation */
+.shijlai-logo--animated .shijlai-logo__orbit-group {
+  animation: shijlai-orbit-rotate 20s linear infinite;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .shijlai-logo--animated .shijlai-logo__core-glow,
+  .shijlai-logo--animated .shijlai-logo__neural,
+  .shijlai-logo--animated .shijlai-logo__node--core,
+  .shijlai-logo--animated .shijlai-logo__node--apex,
+  .shijlai-logo--animated .shijlai-logo__node--converge,
+  .shijlai-logo--animated .shijlai-logo__orbit-group {
+    animation: none !important;
+  }
+}
+
+/* ===== Print Styles for Admin PDF Export ===== */
+@media print {
+  /* Hide navigation, sidebars, headers, footers, buttons */
+  nav,
+  aside,
+  header,
+  footer,
+  button:not([data-print-keep]),
+  [role="tablist"],
+  .ios-glass,
+  .ios-glass-thick,
+  [class*="sidebar"],
+  [class*="bottom-tab"],
+  [class*="StudentBottomTabBar"],
+  [class*="InstructorHeader"],
+  [class*="StudentHeader"],
+  [class*="InstructorSidebar"],
+  [class*="StudentSidebar"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Clean layout */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Remove shadows and rounded corners for print */
+  .ios-shadow,
+  .ios-shadow-sm,
+  .ios-shadow-lg {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb;
+  }
+
+  /* Ensure charts render properly */
+  .recharts-wrapper {
+    break-inside: avoid;
+  }
+
+  /* Prevent page breaks inside cards */
+  [class*="rounded-2xl"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Simplify gradients for print */
+  [class*="bg-gradient"] {
+    background: #10b981 !important;
+    color: white !important;
+  }
+
+  /* Set reasonable margins */
+  @page {
+    margin: 1.5cm;
+  }
+}

@@ -1,0 +1,5 @@
+export { logEvent, getRecentEvents, getEventCount, getEventSum } from './event-service'
+export { computeLearningSpeed, computeEngagementScore, computeConsistencyScore, computeAveragePerformance, computeDropRisk } from './feature-engine'
+export { getOrCreateProfile, updateStudentProfile } from './profile-service'
+export { updateTopicMastery, applyTimeDecay, getWeakTopics, getStrongTopics, getAllMasteries } from './mastery-service'
+export { generateRecommendations } from './recommendation-engine'
