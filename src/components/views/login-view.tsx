@@ -532,7 +532,9 @@ export function LoginView() {
                 </button>
               </p>
             </motion.div>
-
+          </div>
         </div>
       </div>
- 
+    </div>
+  )
+}

@@ -210,64 +210,8 @@ export function RegisterView() {
                 Join 50,000+ students learning smarter with AI-powered tutoring, personalized paths, and gamified experiences.
               </p>
             </div>
-
-            {/* Center — Feature List */}
-            <div className="relative z-10 my-8 space-y-4">
-              {[
-                {
-                  icon: Brain,
-                  title: 'AI-Powered Tutoring',
-                  desc: 'Ask ShijlAI gets instant, personalized help 24/7',
-                },
-                {
-                  icon: Target,
-                  title: 'Personalized Learning Paths',
-                  desc: 'AI adapts to your strengths and weaknesses',
-                },
-                {
-                  icon: Sparkles,
-                  title: 'Smart Study Plans',
-                  desc: 'AI-generated schedules for exams and goals',
-                },
-                {
-                  icon: Trophy,
-                  title: 'Gamified Experience',
-                  desc: 'Earn XP, badges, streaks, and compete on leaderboards',
-                },
-              ].map((feature, i) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1, ...springTransition }}
-                  className="flex items-start gap-3"
-                >
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
-                    <feature.icon className="size-4 text-emerald-100" />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-semibold">{feature.title}</p>
-                    <p className="text-[12px] text-emerald-200">{feature.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Bottom — Stats */}
-            <div className="relative z-10 grid grid-cols-3 gap-3">
-              {[
-                { icon: BookOpen, value: '500+', label: 'Courses' },
-                { icon: Flame, value: '7-Day', label: 'Streaks' },
-                { icon: Zap, value: '24/7', label: 'AI Support' },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-xl bg-white/10 backdrop-blur-sm p-3 text-center border border-white/5">
-                  <stat.icon className="size-4 text-emerald-200 mx-auto mb-1" />
-                  <p className="text-[15px] font-bold">{stat.value}</p>
-                  <p className="text-[10px] text-emerald-200">{stat.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
+
 
           {/* Right Column — Registration Form */}
           <div className="p-8 sm:p-10 flex flex-col justify-center">
