@@ -25,8 +25,10 @@ import {
   Search,
   CheckCheck,
   GraduationCap,
-  Star,
   AlertCircle,
+  Grid,
+  List,
+  Star,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -34,6 +36,13 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -110,6 +119,7 @@ function EarnedCertificateCard({
   onDownloadPng,
   onShare,
   onVerify,
+  viewMode = 'grid',
 }: {
   cert: Certificate
   index: number
@@ -118,6 +128,7 @@ function EarnedCertificateCard({
   onDownloadPng: (cert: Certificate) => void
   onShare: (cert: Certificate) => void
   onVerify: (cert: Certificate) => void
+  viewMode?: 'grid' | 'list'
 }) {
   const templateBadge = getTemplateBadge(cert.templateType)
 
@@ -126,50 +137,50 @@ function EarnedCertificateCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * staggerDelay, ...springTransition }}
-      className="group"
+      className="group flex flex-col h-full"
     >
-      <div className="rounded-2xl ios-shadow-sm bg-card overflow-hidden transition-shadow duration-300 group-hover:shadow-lg border border-border/40">
+      <div className={`rounded-2xl ios-shadow-sm bg-card overflow-hidden transition-shadow duration-300 group-hover:shadow-lg border border-border/40 flex-1 flex ${viewMode === 'list' ? 'flex-row h-48' : 'flex-col'}`}>
         {/* Certificate visual preview (mini) */}
         <div
-          className="relative cursor-pointer ios-press"
+          className={`relative cursor-pointer ios-press overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-950/30 dark:via-background dark:to-teal-950/30 flex items-center justify-center ${viewMode === 'list' ? 'w-56 shrink-0 border-r border-border/40 h-full' : 'h-48 w-full border-b border-border/40'}`}
           onClick={() => onPreview(cert)}
         >
-          {/* Gradient header */}
-          <div className="relative h-36 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 p-4 overflow-hidden">
-            {/* Decorative pattern */}
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
-            {/* Decorative circles */}
-            <div className="absolute -right-8 -top-8 size-32 rounded-full bg-white/5" />
-            <div className="absolute -left-4 -bottom-6 size-24 rounded-full bg-white/5" />
+          {/* Scaled down preview of the certificate */}
+          <div className="absolute inset-0 flex items-center justify-center" style={{ transform: viewMode === 'list' ? 'scale(0.24)' : 'scale(0.35)', transformOrigin: 'center center' }}>
+            <div className="w-[800px] h-[550px] bg-white border-[6px] border-emerald-600 rounded-[32px] p-12 relative flex flex-col items-center justify-center text-emerald-950 shadow-2xl">
+              <div className="absolute top-6 left-6 size-20 border-t-[6px] border-l-[6px] rounded-tl-[40px] border-emerald-400" />
+              <div className="absolute top-6 right-6 size-20 border-t-[6px] border-r-[6px] rounded-tr-[40px] border-emerald-400" />
+              <div className="absolute bottom-6 left-6 size-20 border-b-[6px] border-l-[6px] rounded-bl-[40px] border-emerald-400" />
+              <div className="absolute bottom-6 right-6 size-20 border-b-[6px] border-r-[6px] rounded-br-[40px] border-emerald-400" />
 
-            <div className="relative flex flex-col items-center justify-center h-full gap-1.5 text-center">
-              <ShijlAILogo size="md" variant="light" className="shrink-0" />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">
-                <ShijlAIBrand variant="compact" />
+              <ShijlAILogo size="xl" className="shrink-0 mb-6 scale-[2]" />
+              <p className="text-[24px] font-medium tracking-[0.3em] text-emerald-600 mb-4">
+                🎓 <ShijlAIBrand variant="compact" />
               </p>
-              <p className="text-[14px] font-bold text-white leading-tight">
-                Certificate of Completion
-              </p>
+              <h3 className="text-[56px] font-serif font-bold text-slate-900 mb-6">Certificate of Completion</h3>
+              
+              <div className="w-56 h-1.5 bg-emerald-400 mb-8" />
+              
+              <p className="text-[28px] text-slate-600 mb-2">This certifies that</p>
+              <p className="text-[52px] font-serif font-bold text-emerald-700 mb-8 truncate w-full text-center px-12">{cert.userName}</p>
+              
+              <p className="text-[28px] text-slate-600 mb-2">has successfully completed</p>
+              <p className="text-[38px] font-serif font-semibold text-slate-900 truncate w-full text-center px-12">{cert.courseTitle}</p>
             </div>
-
-            {/* Score badge */}
-            <div className="absolute top-3 right-3">
-              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30 text-[11px] rounded-xl border-0 backdrop-blur-sm">
-                {cert.score ?? 0}%
-              </Badge>
-            </div>
-
-            {/* Template type badge */}
-            <div className="absolute bottom-3 right-3">
-              <Badge variant="outline" className={`text-[9px] rounded-lg border ${templateBadge.color} backdrop-blur-sm`}>
-                {templateBadge.label}
-              </Badge>
-            </div>
+          </div>
+          
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
+            <Badge className="bg-emerald-500/90 text-white hover:bg-emerald-500 text-[10px] rounded-lg shadow-sm border-0 backdrop-blur-sm">
+              {cert.score ?? 0}%
+            </Badge>
+            <Badge variant="outline" className={`text-[10px] rounded-lg border bg-background/90 shadow-sm ${templateBadge.color} backdrop-blur-sm`}>
+              {templateBadge.label}
+            </Badge>
           </div>
         </div>
 
         {/* Certificate info */}
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
           <div>
             <h3 className="font-semibold text-[15px] line-clamp-2 leading-snug">{cert.courseTitle}</h3>
             <div className="flex items-center gap-2 mt-1">
@@ -429,7 +440,7 @@ function CertificatePreviewModal({
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-medium tracking-[0.3em] uppercase text-emerald-600 dark:text-emerald-400">
+                  <p className="text-[11px] font-medium tracking-[0.3em] text-emerald-600 dark:text-emerald-400">
                     🎓 <ShijlAIBrand variant="compact" />
                   </p>
                   <h3 className="mt-2 text-[26px] md:text-[32px] font-serif font-bold text-foreground">
@@ -653,6 +664,9 @@ export function CertificatesView() {
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null)
   const [verifyCert, setVerifyCert] = useState<Certificate | null>(null)
   const [downloadLoading, setDownloadLoading] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState('all')
 
   // Fetch certificates data
   useEffect(() => {
@@ -797,6 +811,19 @@ export function CertificatesView() {
 
   const hasAnyData = earnedCerts.length > 0 || inProgressCerts.length > 0
 
+  const filteredEarnedCerts = earnedCerts.filter(cert => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!cert.courseTitle.toLowerCase().includes(q) && !cert.certificateId.toLowerCase().includes(q)) {
+        return false
+      }
+    }
+    if (filterType !== 'all' && cert.templateType !== filterType) {
+      return false
+    }
+    return true
+  })
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -862,29 +889,82 @@ export function CertificatesView() {
           ═══════════════════════════════════════════════════════ */}
       {earnedCerts.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent" />
-            <h3 className="text-[15px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-              <Star className="size-4" />
-              Earned
-            </h3>
-            <div className="h-px flex-1 bg-gradient-to-l from-emerald-500/30 to-transparent" />
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="h-px flex-1 sm:w-12 bg-gradient-to-r from-emerald-500/30 to-transparent" />
+              <h3 className="text-[15px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2 shrink-0">
+                <Star className="size-4" />
+                Earned
+              </h3>
+              <div className="h-px flex-1 sm:w-12 bg-gradient-to-l from-emerald-500/30 to-transparent sm:hidden" />
+            </div>
+            
+            <div className="flex-1 w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search certificates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10 rounded-xl bg-card border-border/60"
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full sm:w-[140px] h-10 rounded-xl bg-card border-border/60">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="completion">Completion</SelectItem>
+                    <SelectItem value="distinction">Distinction</SelectItem>
+                    <SelectItem value="excellence">Excellence</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center bg-card rounded-xl p-1 border border-border/60 h-10">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className={`px-2 h-full rounded-lg ${viewMode === 'grid' ? 'bg-accent text-foreground shadow-sm' : 'text-muted-foreground'} ios-press`}
+                  >
+                    <Grid className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={`px-2 h-full rounded-lg ${viewMode === 'list' ? 'bg-accent text-foreground shadow-sm' : 'text-muted-foreground'} ios-press`}
+                  >
+                    <List className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {earnedCerts.map((cert, index) => (
-              <EarnedCertificateCard
-                key={cert.id}
-                cert={cert}
-                index={index}
-                onPreview={setPreviewCert}
-                onDownloadPdf={handleDownloadPdf}
-                onDownloadPng={handleDownloadPng}
-                onShare={handleShare}
-                onVerify={handleVerify}
-              />
-            ))}
-          </div>
+          {filteredEarnedCerts.length > 0 ? (
+            <div className={viewMode === 'grid' ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-4"}>
+              {filteredEarnedCerts.map((cert, index) => (
+                <EarnedCertificateCard
+                  key={cert.id}
+                  cert={cert}
+                  index={index}
+                  onPreview={setPreviewCert}
+                  onDownloadPdf={handleDownloadPdf}
+                  onDownloadPng={handleDownloadPng}
+                  onShare={handleShare}
+                  onVerify={handleVerify}
+                  viewMode={viewMode}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-card rounded-2xl border border-border/40">
+              <p className="text-muted-foreground text-[14px]">No certificates match your search criteria.</p>
+              <Button variant="link" onClick={() => {setSearchQuery(''); setFilterType('all');}} className="mt-2 text-[13px]">Clear filters</Button>
+            </div>
+          )}
         </div>
       )}
 
