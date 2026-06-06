@@ -184,7 +184,7 @@ function FoundingStorySection() {
             {[
               { year: '2024 Q1', event: 'ShijlAI Academy founded in Islamabad' },
               { year: '2024 Q2', event: 'First 1,000 students onboarded' },
-              { year: '2024 Q3', event: 'Ask ShijlAI launched with IB/AP support' },
+              { year: '2024 Q3', event: 'ShijlAI Academy launched with IB/AP support' },
               { year: '2024 Q4', event: '50,000+ students, 500+ courses' },
               { year: '2025 Q1', event: 'Multilingual support launched' },
             ].map((milestone) => (
