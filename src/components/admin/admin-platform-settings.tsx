@@ -174,7 +174,6 @@ const TIMEZONE_OPTIONS = [
 
 const CURRENCY_OPTIONS = [
   { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'USD', label: 'USD — US Dollar' },
   { value: 'EUR', label: 'EUR — Euro' },
   { value: 'GBP', label: 'GBP — British Pound' },
 ]
@@ -1736,7 +1735,7 @@ export function AdminPlatformSettings() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
           <TabsList className="inline-flex w-max min-w-full bg-muted/50 p-1 rounded-xl gap-0.5">
             {TABS.map(tab => (
               <TabsTrigger
