@@ -259,7 +259,7 @@ export function SettingsView() {
           <p className="text-[15px] text-muted-foreground leading-relaxed mb-4">
             <ShijlAIText /> Academy is an AI-powered e-learning platform designed to make quality education accessible to everyone. 
             We offer courses across IB, AP, Cambridge, AWS certifications, IELTS preparation, and programming — all enhanced by 
-            Ask ShijlAI, gamification, and personalized learning paths.
+            Ask <span style={{fontFamily:"ScriptMTBold, cursive", fontWeight:"bold"}}>Shijl</span><span style={{fontFamily:"LatinModernRoman, serif", fontWeight:"bold"}}>AI</span>, gamification, and personalized learning paths.
           </p>
 
           <div className="h-px bg-border/60 mb-4" />
