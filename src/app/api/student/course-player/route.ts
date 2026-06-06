@@ -162,7 +162,10 @@ export async function GET(req: NextRequest) {
     ).length
 
     // Determine section status for each module
-    const modulesWithStatus = modules.map((courseModule, moduleIndex) => {
+    const modulesWithStatus = []
+    let previousModuleAllCompleted = true // First module is never locked
+
+    for (const courseModule of modules) {
       const lessonsWithProgress = courseModule.lessons
         .filter((lesson) => lesson.isPublished !== false)
         .map((lesson) => {
@@ -211,35 +214,25 @@ export async function GET(req: NextRequest) {
       } else if (hasCompleted || hasInProgress) {
         sectionStatus = 'in_progress'
       } else {
-        // No started lessons in this module — check if previous module is completed
-        if (moduleIndex === 0) {
-          // First module is never locked
+        // No started lessons in this module
+        if (previousModuleAllCompleted) {
           sectionStatus = 'in_progress'
         } else {
-          // Check previous module (use filtered lessonsWithProgress from previous module)
-          const prevModuleData = modulesWithStatus[moduleIndex - 1]
-          const prevAllCompleted = prevModuleData
-            ? prevModuleData.lessons.length > 0 && prevModuleData.lessons.every(
-              (l) => l.progress?.status === 'completed'
-            )
-            : false
-
-          if (prevAllCompleted) {
-            sectionStatus = 'in_progress'
-          } else {
-            sectionStatus = 'locked'
-          }
+          sectionStatus = 'locked'
         }
       }
 
-      return {
+      modulesWithStatus.push({
         id: courseModule.id,
         title: courseModule.title,
         order: courseModule.order,
         lessons: lessonsWithProgress,
         sectionStatus,
-      }
-    })
+      })
+
+      // Update for the next iteration
+      previousModuleAllCompleted = allCompleted
+    }
 
     // Find next lesson (first uncompleted lesson in order)
     let nextLesson: { id: string; title: string; moduleOrder: number; lessonOrder: number } | null = null

@@ -999,7 +999,7 @@ export function CoursePlayerView() {
   const handleBack = () => {
     setSelectedCourse(null)
     setSelectedLesson(null)
-    setCurrentView('my-learning')
+    setCurrentView('courses')
   }
 
   // ─── Loading / Error States ────────────────────────────────────────────
@@ -1172,9 +1172,9 @@ export function CoursePlayerView() {
       {/* ═══════════════════════════════════════════════════════════════════
           MAIN LAYOUT: Course Sidebar (LEFT) + Video/Tabs (RIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-0 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 min-h-0 overflow-hidden bg-muted/10">
         {/* ─── LEFT: Course Content Sidebar (desktop) ──────────────────────── */}
-        <aside className="hidden lg:flex shrink-0 w-[320px] border-r border-border/40 bg-card flex-col">
+        <aside className="hidden lg:flex shrink-0 w-[320px] xl:w-[360px] border border-border/40 bg-card/80 backdrop-blur-xl shadow-sm rounded-3xl flex-col overflow-hidden">
           <div className="flex flex-col h-full">
             {/* Sidebar header */}
             <div className="p-4 pb-3 border-b border-border/40">
@@ -1406,7 +1406,7 @@ export function CoursePlayerView() {
         </aside>
 
         {/* ─── RIGHT: Video + Tabs ─────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="flex-1 min-w-0 overflow-hidden border border-border/40 bg-card/80 backdrop-blur-xl shadow-sm rounded-3xl flex flex-col">
           {/* ═══════════════════════════════════════════════════════════════
               VIDEO PLAYER
               ═══════════════════════════════════════════════════════════════ */}
