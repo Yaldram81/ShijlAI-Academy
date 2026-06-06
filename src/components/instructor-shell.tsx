@@ -476,7 +476,9 @@ export function InstructorSidebar() {
           {/* Header */}
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="flex items-center gap-2.5">
-              <ShijlAILogo size="xs" className="shrink-0" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+                <BookOpen className="size-4" />
+              </div>
               <span className="text-[16px] font-bold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">Instructor Portal</span>
             </SheetTitle>
             <SheetDescription className="sr-only">Navigation menu</SheetDescription>
@@ -637,17 +639,19 @@ export function InstructorSidebar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full hover:opacity-90 transition-all duration-200"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                   title="Expand sidebar"
                 >
-                  <ShijlAILogo size="sm" />
+                  <ChevronRight className="size-5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="rounded-xl">Instructor Portal</TooltipContent>
+              <TooltipContent side="right" className="rounded-xl">Expand</TooltipContent>
             </Tooltip>
           ) : (
             <>
-              <ShijlAILogo size="xs" className="shrink-0" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+                <BookOpen className="size-4" />
+              </div>
               <AnimatePresence>
                 {sidebarOpen && (
                   <motion.div
@@ -656,7 +660,7 @@ export function InstructorSidebar() {
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap flex-1"
                   >
-                    <h1 className="text-[16px] font-bold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">Instructor Portal</h1>
+                    <h1 className="text-[16px] font-bold tracking-tight bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent ml-1">Instructor Portal</h1>
                   </motion.div>
                 )}
               </AnimatePresence>
