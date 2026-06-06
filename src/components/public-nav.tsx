@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
+import { useTheme } from 'next-themes'
 import {
   GraduationCap, ChevronRight, Menu,
   Twitter, Linkedin, Youtube, Github, Search,
-  LayoutDashboard, LogOut,
+  LayoutDashboard, LogOut, Sun, Moon,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -73,13 +74,14 @@ interface PublicNavProps {
 
 export function PublicNav({ activeView }: PublicNavProps) {
   const { setCurrentView, currentUser, isAuthenticated } = useAppStore()
+  const { theme, setTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
   const activeLabel = activeView ? viewToActiveLabel[activeView] : undefined
 
   return (
-    <nav className="ios-glass-thick sticky top-0 z-50 border-b border-border/30">
+    <nav className="bg-background sticky top-0 z-50 border-b border-border/50 shadow-sm rounded-b-2xl">
       <div className="mx-auto flex max-w-7xl items-center h-12 sm:h-14 px-3 sm:px-6">
         {/* LEFT: Logo */}
         <button
@@ -114,6 +116,18 @@ export function PublicNav({ activeView }: PublicNavProps) {
 
         {/* RIGHT: Actions */}
         <div className="flex items-center gap-1 sm:gap-1.5 ml-auto shrink-0">
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label="Toggle theme"
+          >
+            <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </Button>
+
           {/* Desktop user section */}
           <PublicNavUserSection />
 
