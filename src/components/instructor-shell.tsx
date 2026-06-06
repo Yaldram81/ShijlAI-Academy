@@ -602,6 +602,13 @@ export function InstructorSidebar() {
               <span className="text-[10px] leading-none">{isDark ? 'Light' : 'Dark'}</span>
             </button>
             <button
+              onClick={() => toast.info('Help docs coming soon!')}
+              className="flex-1 flex flex-col items-center gap-1 rounded-lg py-2 px-1 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            >
+              <HelpCircle className="size-4" />
+              <span className="text-[10px] leading-none">Help</span>
+            </button>
+            <button
               onClick={() => {
                 useAppStore.getState().logout()
                 toast.success('Logged out successfully')
@@ -849,6 +856,13 @@ export function InstructorSidebar() {
               <span className="text-[10px] leading-none">{isDark ? 'Light' : 'Dark'}</span>
             </button>
             <button
+              onClick={() => toast.info('Help docs coming soon!')}
+              className="flex-1 flex flex-col items-center gap-1 rounded-lg py-2 px-1 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            >
+              <HelpCircle className="size-4" />
+              <span className="text-[10px] leading-none">Help</span>
+            </button>
+            <button
               onClick={() => {
                 useAppStore.getState().logout()
                 toast.success('Logged out successfully')
@@ -860,7 +874,18 @@ export function InstructorSidebar() {
             </button>
           </div>
         ) : (
-          <div className="px-2 pb-3">
+          <div className="px-2 pb-3 flex flex-col gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => toast.info('Help docs coming soon!')}
+                  className="flex size-10 w-full items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                >
+                  <HelpCircle className="size-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="rounded-xl">Help</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
