@@ -132,6 +132,13 @@ const pageTransition = {
   transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
 }
 
+const publicPageTransition = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
+}
+
 const authViews: View[] = ['login', 'register', 'forgot-password', 'verify-otp']
 const publicViews: View[] = ['landing', 'public-courses', 'public-course-detail', 'pricing', 'instructors', 'about', 'blog', 'blog-detail']
 
@@ -202,7 +209,7 @@ export default function Home() {
             <GraduationCap className="size-10" />
           </div>
           <div className="flex flex-col items-center gap-1.5">
-            <h2 className="text-[20px] font-bold text-foreground">ShijlAI Academy</h2>
+            <h2 className="text-[20px] font-bold text-foreground"><span style={{fontFamily:"ScriptMTBold, cursive", fontWeight:"bold"}}>Shijl</span><span style={{fontFamily:"LatinModernRoman, serif", fontWeight:"bold"}}>AI</span> Academy</h2>
             <div className="flex items-center gap-2">
               <Loader2 className="size-4 animate-spin text-primary" />
               <span className="text-[13px] text-muted-foreground">Loading...</span>
@@ -230,7 +237,7 @@ export default function Home() {
       <TooltipProvider>
         <div className="min-h-screen bg-background">
           <AnimatePresence mode="wait">
-            <motion.div key={currentView} {...pageTransition}>
+            <motion.div key={currentView} {...publicPageTransition} style={{ willChange: 'auto' }}>
               <LazyViewContent view={currentView} userRole={currentUser?.role} />
             </motion.div>
           </AnimatePresence>
@@ -243,9 +250,9 @@ export default function Home() {
   if (isPublicView) {
     return (
       <TooltipProvider>
-        <div className="min-h-screen bg-background overflow-x-hidden p-0">
+        <div className="min-h-screen bg-background p-0">
           <AnimatePresence mode="wait">
-            <motion.div key={currentView} {...pageTransition}>
+            <motion.div key={currentView} {...publicPageTransition} style={{ willChange: 'auto' }}>
               <LazyViewContent view={currentView} userRole={currentUser?.role} />
             </motion.div>
           </AnimatePresence>
@@ -287,7 +294,7 @@ export default function Home() {
               </AnimatePresence>
               {!isFullView && (
                 <footer className="mt-8 pt-4 pb-2 text-center text-[11px] text-muted-foreground/50">
-                  <p>ShijlAI Academy — Admin Panel</p>
+                  <p><span style={{fontFamily:"ScriptMTBold, cursive", fontWeight:"bold"}}>Shijl</span><span style={{fontFamily:"LatinModernRoman, serif", fontWeight:"bold"}}>AI</span> Academy — Admin Panel</p>
                 </footer>
               )}
             </main>
