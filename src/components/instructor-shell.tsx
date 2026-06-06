@@ -991,7 +991,7 @@ export function InstructorHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center ios-glass-thick border-b border-border/40 px-3 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center ios-glass-thick border-b border-border/40 px-3 md:px-6 rounded-b-2xl">
       {/* LEFT: Hamburger + Brand */}
       <Button
         variant="ghost"
