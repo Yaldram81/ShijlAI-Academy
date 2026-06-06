@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { ShijlAIBrand } from '@/components/ui/brand-text'
 import { ShijlAILogo } from '@/components/ui/shijlai-logo'
+import { PublicNav } from '@/components/public-nav'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -265,7 +266,9 @@ export function LoginView() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+    <div className="min-h-screen flex flex-col bg-background">
+      <PublicNav activeView="login" />
+      <div className="flex-1 flex items-center justify-center py-12">
       <div className="w-full max-w-5xl mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-2 rounded-3xl overflow-hidden ios-shadow-xl border border-border/30 bg-card">
           
@@ -535,6 +538,7 @@ export function LoginView() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }

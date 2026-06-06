@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { ShijlAIBrand } from '@/components/ui/brand-text'
 import { ShijlAILogo } from '@/components/ui/shijlai-logo'
+import { PublicNav } from '@/components/public-nav'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -168,7 +169,9 @@ export function RegisterView() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+    <div className="min-h-screen flex flex-col bg-background">
+      <PublicNav activeView="register" />
+      <div className="flex-1 flex items-center justify-center py-12">
       {/* OTP Demo Toast */}
       {otpToast && (
         <motion.div
@@ -458,5 +461,6 @@ export function RegisterView() {
         </div>
       </div>
     </div>
+  </div>
   )
 }
