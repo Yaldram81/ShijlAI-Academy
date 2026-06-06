@@ -35,28 +35,28 @@ export function ShijlAIBrand({
   const lmrFont = "[font-family:'LatinModernRoman',serif]"
 
   const sizeClass = variant === 'nav'
-    ? 'text-[15px]'
+    ? 'text-[16px]'
     : variant === 'compact'
       ? 'text-[13px]'
       : 'text-[17px]'
 
   const shijlClass = variant === 'gradient'
-    ? cn(shijlFont, 'font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
+    ? cn(shijlFont, 'font-bold text-[1.15em] bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
     : variant === 'light'
-      ? cn(shijlFont, 'font-bold text-white')
-      : cn(shijlFont, 'font-bold text-foreground')
+      ? cn(shijlFont, 'font-bold text-[1.15em] text-white')
+      : cn(shijlFont, 'font-bold text-[1.15em] text-foreground')
 
   const aiClass = variant === 'gradient'
-    ? cn(lmrFont, 'bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
+    ? cn(lmrFont, 'font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
     : variant === 'light'
-      ? cn(lmrFont, 'text-white')
-      : cn(lmrFont, 'text-foreground')
+      ? cn(lmrFont, 'font-bold text-white')
+      : cn(lmrFont, 'font-bold text-foreground')
 
   const academyClass = variant === 'gradient'
-    ? cn(lmrFont, 'text-[11px] font-semibold uppercase tracking-widest text-primary ml-1')
+    ? cn(lmrFont, 'text-[12px] font-bold uppercase tracking-widest text-primary ml-1')
     : variant === 'light'
-      ? cn(lmrFont, 'text-[11px] font-semibold uppercase tracking-widest text-white/90 ml-1')
-      : cn(lmrFont, 'text-[11px] font-semibold uppercase tracking-widest text-primary ml-1')
+      ? cn(lmrFont, 'text-[12px] font-bold uppercase tracking-widest text-white/90 ml-1')
+      : cn(lmrFont, 'text-[12px] font-bold uppercase tracking-widest text-primary ml-1')
 
   return (
     <Component className={cn('inline-flex items-baseline', sizeClass, className)}>
@@ -84,16 +84,16 @@ interface ShijlAITextProps {
 }
 
 export function ShijlAIText({ className, gradient = false }: ShijlAITextProps) {
-  const shijlFont = "[font-family:'ScriptMTBold',cursive]"
+  const shijlFont = "[font-family:'ScriptMTBold']"
   const lmrFont = "[font-family:'LatinModernRoman',serif]"
 
   const shijlClass = gradient
-    ? cn(shijlFont, 'font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
-    : cn(shijlFont, 'font-bold text-inherit')
+    ? cn(shijlFont, 'font-bold text-[1.15em] bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
+    : cn(shijlFont, 'font-bold text-[1.15em] text-inherit')
 
   const aiClass = gradient
-    ? cn(lmrFont, 'bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
-    : cn(lmrFont, 'text-inherit')
+    ? cn(lmrFont, 'font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent')
+    : cn(lmrFont, 'font-bold text-inherit')
 
   return (
     <span className={cn('inline', className)}>
