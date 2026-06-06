@@ -47,7 +47,7 @@ function useCountUp(end: number, duration = 2000) {
 }
 
 // Hero Section
-function HeroSection() {
+function HeroSection({ studentCount }: { studentCount?: number }) {
   const { setCurrentView, isAuthenticated } = useAppStore()
   return (
     <section className="relative overflow-hidden pt-4 sm:pt-6 lg:pt-8 pb-10 sm:pb-14">
@@ -122,7 +122,7 @@ function HeroSection() {
                 ))}
               </div>
               <div className="text-[13px]">
-                <span className="font-semibold text-foreground">50,000+</span>{' '}
+                <span className="font-semibold text-foreground">{studentCount !== undefined ? (studentCount - 1).toLocaleString() : '...'}</span>{'+ '}
                 <span className="text-muted-foreground">students already learning</span>
               </div>
             </div>
@@ -143,7 +143,7 @@ function HeroSection() {
                     <Brain className="size-5" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-semibold">Ask ShijlAI Active</p>
+                    <p className="text-[15px] font-semibold">Ask <span style={{ fontFamily: "ScriptMTBold, cursive", fontWeight: "bold" }}>Shijl</span><span style={{ fontFamily: "LatinModernRoman, serif", fontWeight: "bold" }}>AI</span> Active</p>
                     <p className="text-[11px] text-muted-foreground">Personalized session in progress</p>
                   </div>
                   <div className="ml-auto flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/40 px-2.5 py-1">
@@ -243,13 +243,20 @@ function StatCounterItem({ stat, index }: { stat: { value: number; suffix: strin
 }
 
 // Social Proof Stats
-function StatsSection() {
-  const stats = [
-    { value: 50000, suffix: '+', label: 'Students', icon: Users },
-    { value: 500, suffix: '+', label: 'Courses', icon: BookOpen },
-    { value: 4.8, suffix: '', label: 'Rating', icon: Star, decimal: true },
-    { value: 15000, suffix: '+', label: 'Certificates', icon: Award },
+function StatsSection({ stats }: { stats?: any }) {
+  const defaultStats = [
+    { value: 0, suffix: '+', label: 'Students', icon: Users },
+    { value: 0, suffix: '+', label: 'Courses', icon: BookOpen },
+    { value: 0, suffix: '', label: 'Rating', icon: Star, decimal: true },
+    { value: 0, suffix: '+', label: 'Certificates', icon: Award },
   ]
+
+  const displayStats = stats ? [
+    { value: stats.totalStudents, suffix: '+', label: 'Students', icon: Users },
+    { value: stats.totalCourses, suffix: '+', label: 'Courses', icon: BookOpen },
+    { value: stats.avgRating, suffix: '', label: 'Rating', icon: Star, decimal: true },
+    { value: stats.totalCertificates, suffix: '+', label: 'Certificates', icon: Award },
+  ] : defaultStats
 
   return (
     <section className="py-6 sm:py-8">
@@ -263,7 +270,7 @@ function StatsSection() {
         >
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40" />
           <div className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, i) => (
+            {displayStats.map((stat, i) => (
               <StatCounterItem key={stat.label} stat={stat} index={i} />
             ))}
           </div>
@@ -318,7 +325,7 @@ function FeaturesSection() {
         >
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 dark:bg-emerald-950/40 px-4 py-1.5 text-[13px] font-medium text-emerald-700 dark:text-emerald-400 mb-3">
             <Sparkles className="size-3.5" />
-            Why <ShijlAIText />?
+            Why <ShijlAIBrand variant="compact" />?
           </div>
           <h2 className="text-[28px] sm:text-[34px] font-bold tracking-tight">
             Learning Reimagined with{' '}
@@ -327,7 +334,7 @@ function FeaturesSection() {
             </span>
           </h2>
           <p className="mt-3 text-[17px] text-muted-foreground max-w-2xl mx-auto">
-            Four pillars that make <ShijlAIText /> the most effective learning platform for students worldwide.
+            Four pillars that make <ShijlAIBrand variant="compact" /> the most effective learning platform for students worldwide.
           </p>
         </motion.div>
 
@@ -413,7 +420,7 @@ function DynamicCourseCarousels() {
       } else {
         await fetch(`/api/courses/${courseId}/wishlist`, { method: 'POST' })
       }
-    } catch {}
+    } catch { }
   }, [currentUser])
 
   const handleEnroll = useCallback((courseId: string) => {
@@ -671,32 +678,37 @@ function CurriculumSection() {
 }
 
 // Instructor Spotlights
-function InstructorSpotlights() {
-  const instructors = [
+function InstructorSpotlights({ instructors }: { instructors?: any[] }) {
+  // Use real DB instructors, fallback to mock if none returned or loading
+  const displayInstructors = instructors?.length ? instructors : [
     {
       name: 'Dr. Fatima Khan',
       subject: 'IB Mathematics',
       rating: 4.9,
-      students: 3200,
+      studentCount: 3200,
       initials: 'FK',
-      color: 'from-emerald-400 to-teal-500',
     },
     {
       name: 'Prof. Ahmad Raza',
       subject: 'O/A Level Physics',
       rating: 4.8,
-      students: 2800,
+      studentCount: 2800,
       initials: 'AR',
-      color: 'from-teal-400 to-emerald-500',
     },
     {
       name: 'Sarah Malik',
       subject: 'IELTS Preparation',
       rating: 4.9,
-      students: 4100,
+      studentCount: 4100,
       initials: 'SM',
-      color: 'from-emerald-500 to-teal-600',
     },
+  ]
+
+  // Assign consistent colors to instructors based on their index
+  const colors = [
+    'from-emerald-400 to-teal-500',
+    'from-teal-400 to-emerald-500',
+    'from-emerald-500 to-teal-600'
   ]
 
   return (
@@ -721,7 +733,7 @@ function InstructorSpotlights() {
         </motion.div>
 
         <div className="grid gap-5 sm:grid-cols-3">
-          {instructors.map((instructor, i) => (
+          {displayInstructors.map((instructor, i) => (
             <motion.div
               key={instructor.name}
               initial={{ opacity: 0, y: 20 }}
@@ -731,7 +743,7 @@ function InstructorSpotlights() {
               whileHover={{ y: -4, transition: { duration: 0.2 } }}
               className="rounded-2xl ios-shadow-sm bg-card p-6 text-center"
             >
-              <div className={`mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-gradient-to-br ${instructor.color} text-white ios-shadow`}>
+              <div className={`mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-gradient-to-br ${colors[i % colors.length]} text-white ios-shadow`}>
                 <span className="text-[22px] font-bold">{instructor.initials}</span>
               </div>
               <h3 className="text-[17px] font-semibold">{instructor.name}</h3>
@@ -743,7 +755,7 @@ function InstructorSpotlights() {
                 </div>
                 <div className="flex items-center gap-1 text-[13px] text-muted-foreground">
                   <Users className="size-3.5" />
-                  {instructor.students.toLocaleString()}
+                  {instructor.studentCount.toLocaleString()}
                 </div>
               </div>
             </motion.div>
@@ -758,7 +770,7 @@ function InstructorSpotlights() {
 function TestimonialsSection() {
   const testimonials: { quote: React.ReactNode; name: string; course: string; rating: number; initials: string; gradient: string }[] = [
     {
-      quote: <><ShijlAIText /> completely transformed my IB preparation. Ask ShijlAI helped me understand complex calculus concepts that I struggled with for months.</>,
+      quote: <><ShijlAIText /> completely transformed my IB preparation. Ask <span style={{ fontFamily: "ScriptMTBold, cursive", fontWeight: "bold" }}>Shijl</span><span style={{ fontFamily: "LatinModernRoman, serif", fontWeight: "bold" }}>AI</span> helped me understand complex calculus concepts that I struggled with for months.</>,
       name: 'Ahmed Hassan',
       course: 'IB Mathematics',
       rating: 5,
@@ -853,7 +865,7 @@ function TestimonialsSection() {
 }
 
 // Final CTA
-function FinalCTA() {
+function FinalCTA({ studentCount }: { studentCount?: number }) {
   const { setCurrentView, isAuthenticated } = useAppStore()
   return (
     <section className="py-8 sm:py-10">
@@ -873,7 +885,7 @@ function FinalCTA() {
             <p className="mt-3 text-[17px] text-emerald-200 max-w-xl mx-auto">
               {isAuthenticated
                 ? 'Pick up where you left off and keep mastering new skills with AI-powered education.'
-                : 'Join 50,000+ students worldwide who are already learning smarter with AI-powered education.'}
+                : `Join ${studentCount !== undefined ? studentCount.toLocaleString() : '...'} students worldwide who are already learning smarter with AI-powered education.`}
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
               {isAuthenticated ? (
@@ -1131,18 +1143,27 @@ function LandingFooter() {
 }
 
 export function LandingView() {
+  const [landingData, setLandingData] = useState<any>(null)
+
+  useEffect(() => {
+    fetch('/api/public/landing-stats')
+      .then(res => res.json())
+      .then(data => setLandingData(data))
+      .catch(err => console.error('Failed to load landing stats:', err))
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       <PublicNav activeView="landing" />
-      <HeroSection />
-      <StatsSection />
+      <HeroSection studentCount={landingData?.stats?.totalStudents} />
+      <StatsSection stats={landingData?.stats} />
       <FeaturesSection />
       <DynamicCourseCarousels />
       <HowItWorksSection />
       <CurriculumSection />
-      <InstructorSpotlights />
+      <InstructorSpotlights instructors={landingData?.topInstructors} />
       <TestimonialsSection />
-      <FinalCTA />
+      <FinalCTA studentCount={landingData?.stats?.totalStudents} />
       <LandingFooter />
     </div>
   )
