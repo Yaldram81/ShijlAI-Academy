@@ -47,7 +47,6 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { useLearningEvents } from '@/hooks/use-learning-events'
-import { ShijlAIText } from '@/components/ui/brand-text'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -80,6 +79,8 @@ import {
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { ShijlAIBrand, ShijlAIText } from '@/components/ui/brand-text'
+
 
 /* ─── Types ─── */
 type AIMode = 'tutor' | 'quiz' | 'assignment' | 'planner' | 'career'
