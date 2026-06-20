@@ -1223,8 +1223,8 @@ export function CommunityView() {
                 )}
               </div>
               <div className="flex items-center gap-4 mt-3 text-[12px] text-muted-foreground">
-                <span className="flex items-center gap-1"><MessageSquare className="size-3" /> {groupDetail.stats.totalMessages} messages</span>
-                <span className="flex items-center gap-1"><FileText className="size-3" /> {groupDetail.stats.totalResources} resources</span>
+                <span className="flex items-center gap-1"><MessageSquare className="size-3" /> {groupDetail.stats?.totalMessages ?? 0} messages</span>
+                <span className="flex items-center gap-1"><FileText className="size-3" /> {groupDetail.stats?.totalResources ?? 0} resources</span>
               </div>
             </div>
           </div>

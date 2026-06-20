@@ -1660,16 +1660,10 @@ export function InstructorDashboard() {
                       className="h-7 text-[11px] gap-1.5 rounded-lg shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (action.type === 'qa') {
-                          setReplyDialog({ open: true, questionId: 'latest', questionText: 'Quick reply to Q&A question' })
-                        } else if (action.type === 'assignments') {
-                          setGradeDialog({ open: true, submissionId: 'latest', studentName: 'Student', assignmentTitle: 'Assignment', maxScore: 100 })
-                        } else {
-                          setCurrentView(action.actionView as 'instructor-courses')
-                        }
+                        setCurrentView(action.actionView as any)
                       }}
                     >
-                      {action.type === 'qa' ? 'Reply' : action.type === 'assignments' ? 'Grade' : action.actionLabel}
+                      {action.actionLabel}
                       <ChevronRight className="size-3" />
                     </Button>
                   </motion.div>

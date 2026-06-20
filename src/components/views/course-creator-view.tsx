@@ -487,9 +487,13 @@ export function CourseCreatorView() {
       if (form.publishOption === 'draft') {
         // Just save as draft — don't submit for review
         submitPayload.reviewStatus = 'draft'
+      } else if (form.publishOption === 'review') {
+        // Submit for review 
+        submitPayload.reviewStatus = 'under_review'
+        submitPayload.submittedForReviewAt = new Date().toISOString()
       } else {
-        // Submit for review (immediate or scheduled)
-        submitPayload.reviewStatus = 'pending'
+        // Submit for review (scheduled)
+        submitPayload.reviewStatus = 'under_review'
         submitPayload.submittedForReviewAt = new Date().toISOString()
       }
 
@@ -506,8 +510,8 @@ export function CourseCreatorView() {
             description: `Will go live on ${form.scheduledDate} at ${form.scheduledTime || '12:00'} after admin approval.`,
           })
         } else {
-          toast.success('Course submitted for admin review! 🎉', {
-            description: 'You\'ll be notified once an admin reviews and approves your course.',
+          toast.success('Course submitted for review! 🎉', {
+            description: 'Your course has been sent to the admin for approval.',
           })
         }
         setEditingCourseId(null)

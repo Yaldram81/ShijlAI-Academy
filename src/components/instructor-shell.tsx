@@ -915,7 +915,7 @@ export function InstructorSidebar() {
    INSTRUCTOR HEADER (with real notifications & messages)
    ═══════════════════════════════════════════════════════════ */
 export function InstructorHeader() {
-  const { currentUser, setCurrentUser, setSidebarOpen } = useAppStore()
+  const { currentUser, setCurrentUser, setSidebarOpen, setCurrentView } = useAppStore()
 
   // ─── Real notifications state ───
   const [notifications, setNotifications] = useState<ApiNotification[]>([])

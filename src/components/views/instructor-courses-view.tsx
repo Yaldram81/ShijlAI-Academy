@@ -1325,7 +1325,7 @@ export function InstructorCoursesView() {
       const res = await fetch(`/api/instructor/courses/${course.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPublished: !course.isPublished }),
+        body: JSON.stringify({ instructorId: currentUser.id, isPublished: !course.isPublished, reviewStatus: !course.isPublished ? 'approved' : 'draft' }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -1458,6 +1458,11 @@ export function InstructorCoursesView() {
     setEditingCourseId(course.id)
     setCreatorStep(0)
     setCurrentView('course-creator')
+  }
+
+  const handleManageCourse = (courseId: string) => {
+    setSelectedCourseId(courseId)
+    setCurrentView('instructor-course-detail')
   }
 
   const handleNavigateToDetail = (course: InstructorCourse) => {

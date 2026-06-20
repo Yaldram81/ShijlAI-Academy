@@ -1323,7 +1323,7 @@ function QualityScoreTab({
     )
   }
 
-  if (!data || data.scores.length === 0) {
+  if (!data || !data.scores || data.scores.length === 0) {
     return (
       <EmptyState
         icon={Award}

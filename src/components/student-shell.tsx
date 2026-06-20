@@ -779,7 +779,7 @@ export function StudentSidebar() {
    STUDENT HEADER
    ═══════════════════════════════════════════════════════════ */
 export function StudentHeader() {
-  const { currentUser, setCurrentUser, setSidebarOpen, setCurrentView } = useAppStore()
+  const { currentUser, setCurrentUser, setSidebarOpen, setCurrentView, setSelectedCourseId } = useAppStore()
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -1015,6 +1015,21 @@ export function StudentHeader() {
                               )
                               setUnreadCount(prev => Math.max(0, prev - 1))
                             }).catch(() => {})
+                          }
+                          
+                          // Route based on notification data
+                          if (n.type === 'message' || n.type === 'announcement') {
+                            setCurrentView('student-messages')
+                          } else if (n.type === 'assignment') {
+                            setCurrentView('student-assignments')
+                          } else if (n.courseId) {
+                            setSelectedCourseId(n.courseId)
+                            setCurrentView('course-player')
+                          } else if (n.link && !n.link.startsWith('http')) {
+                            // If it's a valid view string, try routing, else ignore
+                            if (['notifications', 'student-profile', 'student-schedule'].includes(n.link)) {
+                              setCurrentView(n.link as any)
+                            }
                           }
                         }}
                       >

@@ -161,7 +161,7 @@ export interface CourseFormData {
   requirements: string[]
 
   // Step 6: Publish
-  publishOption: 'immediate' | 'scheduled' | 'draft'
+  publishOption: 'review' | 'scheduled' | 'draft'
   scheduledDate: string
   scheduledTime: string
 

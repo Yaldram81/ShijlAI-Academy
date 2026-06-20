@@ -107,8 +107,6 @@ const TIMEZONES = [
   { value: 'Asia/Dubai', label: 'UAE (GST, UTC+4)' },
   { value: 'Asia/Kolkata', label: 'India (IST, UTC+5:30)' },
   { value: 'Asia/Riyadh', label: 'Saudi Arabia (AST, UTC+3)' },
-  { value: 'Europe/London', label: 'UK (GMT/BST)' },
-  { value: 'America/New_York', label: 'US Eastern (EST/EDT)' },
   { value: 'America/Los_Angeles', label: 'US Pacific (PST/PDT)' },
   { value: 'Asia/Tokyo', label: 'Japan (JST, UTC+9)' },
   { value: 'Asia/Shanghai', label: 'China (CST, UTC+8)' },
@@ -512,7 +510,7 @@ function ProfileTab() {
               <Avatar className="size-16 ring-2 ring-primary/20 rounded-2xl">
                 <AvatarImage src={photoUrl || undefined} alt={profile.displayName} />
                 <AvatarFallback className="text-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white font-bold rounded-2xl">
-                  {profile.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'IN'}
+                  {profile.displayName ? profile.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'IN'}
                 </AvatarFallback>
               </Avatar>
               <div>

@@ -61,6 +61,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import type { Module } from '@/lib/types'
+import { CourseEnrollDialog } from '@/components/course-enroll-dialog'
 
 // ─── Constants & Types ──────────────────────────────────────────────────────
 
@@ -277,6 +278,7 @@ export function PublicCourseDetailView() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [expandedModules, setExpandedModules] = useState<string[]>([])
   const [enrolling, setEnrolling] = useState(false)
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -319,30 +321,7 @@ export function PublicCourseDetailView() {
       setCurrentView('register')
       return
     }
-    if (!currentUser || !selectedCourse) return
-    setEnrolling(true)
-    try {
-      const res = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, courseId: selectedCourse.id }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to enroll')
-      }
-      const enrollRes = await fetch(`/api/enrollments?userId=${currentUser.id}`)
-      if (enrollRes.ok) {
-        const enrollData = await enrollRes.json()
-        setEnrollments(enrollData.enrollments || [])
-      }
-      setCurrentView('course-detail')
-    } catch (err) {
-      console.error('Enrollment error:', err)
-      toast.error('Failed to enroll. Please try again.')
-    } finally {
-      setEnrolling(false)
-    }
+    setEnrollDialogOpen(true)
   }
 
   const handleWishlist = () => {
@@ -520,6 +499,7 @@ export function PublicCourseDetailView() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <PublicNav activeView="public-course-detail" />
+      <CourseEnrollDialog course={course as any} open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen} />
 
       {/* ─── Hero Section ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">

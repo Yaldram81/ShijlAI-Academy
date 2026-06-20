@@ -52,6 +52,7 @@ import {
 import { toast } from 'sonner'
 import { MobileFilterSheet, MobileFilterGroup } from '@/components/mobile-filter-sheet'
 import type { Course, CourseLevel } from '@/lib/types'
+import { CourseEnrollDialog } from '@/components/course-enroll-dialog'
 
 /* ─── Types ─── */
 interface CourseWithExtras extends Course {
@@ -293,7 +294,7 @@ function CourseCardGrid({
 }: {
   course: CourseWithExtras
   index: number
-  onEnroll: (courseId: string) => void
+  onEnroll: (course: CourseWithExtras) => void
   onWishlist: (courseId: string, isWishlisted: boolean) => void
   onCourseClick: (course: CourseWithExtras) => void
 }) {
@@ -460,7 +461,7 @@ function CourseCardGrid({
                 className="w-full h-9 rounded-xl text-[13px] font-semibold"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onEnroll(course.id)
+                  onEnroll(course)
                 }}
               >
                 {course.price === 0 ? (
@@ -487,7 +488,7 @@ function CourseCardList({
 }: {
   course: CourseWithExtras
   index: number
-  onEnroll: (courseId: string) => void
+  onEnroll: (course: CourseWithExtras) => void
   onWishlist: (courseId: string, isWishlisted: boolean) => void
   onCourseClick: (course: CourseWithExtras) => void
 }) {
@@ -619,7 +620,7 @@ function CourseCardList({
                 className="h-8 rounded-lg text-[12px] font-semibold"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onEnroll(course.id)
+                  onEnroll(course)
                 }}
               >
                 {course.price === 0 ? 'Enroll Free' : 'Enroll Now'}
@@ -644,7 +645,7 @@ function CourseCard({
 }: {
   course: CourseWithExtras
   index: number
-  onEnroll: (courseId: string) => void
+  onEnroll: (course: CourseWithExtras) => void
   onWishlist: (courseId: string, isWishlisted: boolean) => void
   onCourseClick: (course: CourseWithExtras) => void
   viewMode: ViewMode
@@ -685,7 +686,7 @@ function SectionRow({
   title: string
   subtitle?: string
   courses: CourseWithExtras[]
-  onEnroll: (courseId: string) => void
+  onEnroll: (course: CourseWithExtras) => void
   onWishlist: (courseId: string, isWishlisted: boolean) => void
   onCourseClick: (course: CourseWithExtras) => void
   onSeeAll?: () => void
@@ -812,6 +813,10 @@ export function ExploreView() {
 
   // Search focus state
   const [searchFocused, setSearchFocused] = useState(false)
+  
+  // Enroll dialog state
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
+  const [enrollCourse, setEnrollCourse] = useState<Course | null>(null)
 
   // Category data from API
   const [categoryData, setCategoryData] = useState<CategoryInfo[]>([])
@@ -904,32 +909,13 @@ export function ExploreView() {
   }, [fetchFilteredCourses, searchQuery])
 
   // Enroll handler
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = (course: CourseWithExtras) => {
     if (!currentUser) {
       toast.error('Please log in to enroll')
       return
     }
-    try {
-      const res = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, courseId }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        toast.success('Enrolled successfully! 🎉')
-        // Update local enrollment cache
-        if (data.enrollment) {
-          setEnrollments([...enrollments, data.enrollment])
-        }
-        // Refresh catalog
-        fetchFilteredCourses()
-      } else {
-        toast.error('Failed to enroll')
-      }
-    } catch {
-      toast.error('Failed to enroll')
-    }
+    setEnrollCourse(course as unknown as Course)
+    setEnrollDialogOpen(true)
   }
 
   // Wishlist handler
@@ -1006,6 +992,7 @@ export function ExploreView() {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
+      <CourseEnrollDialog course={enrollCourse as any} open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen} />
       {/* ═══ Hero Banner with Enhanced Search ═══ */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-600 p-4 md:p-6 lg:p-8 ios-shadow-lg">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />

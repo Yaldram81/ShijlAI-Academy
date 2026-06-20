@@ -12,6 +12,8 @@ import {
   ArrowUpRight, ArrowDownRight, GraduationCap, Layers,
   AlertCircle, Eye,
 } from 'lucide-react'
+import ReactCrop, { type Crop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import { cn } from '@/lib/utils'
 import { InstructorStatCard, InstructorStatCardGrid } from '@/components/instructor/instructor-stat-card'
 import { useAppStore } from '@/lib/store'
@@ -672,6 +674,12 @@ export function InstructorProfileView() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // ─── Crop State ───
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [imgSrc, setImgSrc] = useState('')
+  const [crop, setCrop] = useState<Crop>()
+  const imageRef = useRef<HTMLImageElement>(null)
 
   // ─── Fetch profile data ───────────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
@@ -933,32 +941,62 @@ export function InstructorProfileView() {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return }
+    
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImgSrc(reader.result as string)
+      setCropDialogOpen(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropComplete = async () => {
+    if (!imageRef.current || !crop) return
+    const canvas = document.createElement('canvas')
+    const scaleX = imageRef.current.naturalWidth / imageRef.current.width
+    const scaleY = imageRef.current.naturalHeight / imageRef.current.height
+    canvas.width = crop.width
+    canvas.height = crop.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(
+      imageRef.current,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height
+    )
+    const base64 = canvas.toDataURL('image/jpeg')
+    
+    setCropDialogOpen(false)
     setUploadingAvatar(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async (ev) => {
-        const base64 = ev.target?.result as string
-        const res = await fetch('/api/instructor/profile-full/avatar', {
+      const res = await fetch('/api/instructor/profile-full/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructorId: currentUser?.id, avatarData: base64 }),
+      })
+      if (!res.ok) {
+        // Fallback
+        const fallbackRes = await fetch('/api/instructor/settings/avatar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instructorId: currentUser?.id, avatarData: base64 }),
+          body: JSON.stringify({ userId: currentUser?.id, avatarData: base64 }),
         })
-        if (!res.ok) {
-          // Fallback
-          const fallbackRes = await fetch('/api/instructor/settings/avatar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: currentUser?.id, avatarData: base64 }),
-          })
-          if (!fallbackRes.ok) throw new Error('Failed to upload photo')
-        }
-        // Update local state immediately
-        if (data) {
-          setData(prev => prev ? { ...prev, profile: { ...prev.profile, avatar: base64 } } : prev)
-        }
-        toast.success('Photo uploaded!')
+        if (!fallbackRes.ok) throw new Error('Failed to upload photo')
       }
-      reader.readAsDataURL(file)
+      // Update local state immediately
+      if (data) {
+        setData(prev => prev ? { ...prev, profile: { ...prev.profile, avatar: base64 } } : prev)
+      }
+      if (currentUser) {
+        useAppStore.getState().setCurrentUser({ ...currentUser, avatar: base64 })
+      }
+      toast.success('Photo uploaded!')
     } catch {
       toast.error('Failed to upload photo')
     } finally {
@@ -984,6 +1022,9 @@ export function InstructorProfileView() {
       }
       if (data) {
         setData(prev => prev ? { ...prev, profile: { ...prev.profile, avatar: null } } : prev)
+      }
+      if (currentUser) {
+        useAppStore.getState().setCurrentUser({ ...currentUser, avatar: null })
       }
       toast.success('Photo removed')
     } catch {
@@ -1039,6 +1080,26 @@ export function InstructorProfileView() {
   return (
     <div className="space-y-6 pb-4">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+      
+      <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Crop Profile Picture</DialogTitle>
+            <DialogDescription>Adjust the crop to your liking before uploading.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center p-4 bg-muted rounded-xl">
+            {imgSrc && (
+              <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} aspect={1} circularCrop>
+                <img ref={imageRef} src={imgSrc} alt="Crop preview" className="max-h-[300px] w-auto object-contain" />
+              </ReactCrop>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCropDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCropComplete}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
           HERO SECTION

@@ -213,13 +213,22 @@ function ConfirmSubmitDialog({
                 ) : isScheduled ? (
                   <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be submitted to an admin for review. Once approved, it will go live on <span className="font-semibold text-foreground">{scheduledDate}</span> at <span className="font-semibold text-foreground">{scheduledTime || '12:00'}</span>.</>
                 ) : (
-                  <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be submitted to an admin for review. Once approved, it will go live immediately.</>
+                  <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be submitted to an admin for review before going live.</>
                 )}
               </p>
             </div>
 
             {/* Info Banner */}
-            {!isDraft && (
+            {!isDraft && !isScheduled && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 p-3 flex items-start gap-2.5">
+                <Shield className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                  Admin review typically takes 24–48 hours. You&apos;ll receive a notification once your course is approved or if changes are requested.
+                </p>
+              </div>
+            )}
+            
+            {isScheduled && (
               <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 p-3 flex items-start gap-2.5">
                 <Shield className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-[12px] text-amber-700 dark:text-amber-400">
@@ -405,7 +414,7 @@ export function Step6Review({
   const submitButtonLabel = useMemo(() => {
     if (form.publishOption === 'draft') return 'Save as Draft'
     if (form.publishOption === 'scheduled') return 'Submit & Schedule'
-    return 'Submit for Admin Review'
+    return 'Submit for Review'
   }, [form.publishOption])
 
   const submitButtonIcon = useMemo(() => {
@@ -549,7 +558,7 @@ export function Step6Review({
 
           <RadioGroup
             value={form.publishOption}
-            onValueChange={(v) => onFormChange({ publishOption: v as 'immediate' | 'scheduled' | 'draft' })}
+            onValueChange={(v) => onFormChange({ publishOption: v as 'review' | 'scheduled' | 'draft' })}
             className="space-y-4"
           >
             {/* ─── Option 1: Submit for Admin Review ─── */}
@@ -557,34 +566,34 @@ export function Step6Review({
               whileTap={{ scale: 0.998 }}
               className={cn(
                 'rounded-2xl border-2 p-5 cursor-pointer transition-all',
-                form.publishOption === 'immediate'
+                form.publishOption === 'review'
                   ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 ios-shadow'
                   : 'border-border hover:border-emerald-300/50 ios-shadow-sm'
               )}
-              onClick={() => onFormChange({ publishOption: 'immediate' })}
+              onClick={() => onFormChange({ publishOption: 'review' })}
             >
               <div className="flex items-start gap-4">
-                <RadioGroupItem value="immediate" id="immediate" className="mt-1 shrink-0" />
+                <RadioGroupItem value="review" id="review" className="mt-1 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       'flex size-10 items-center justify-center rounded-xl shrink-0',
-                      form.publishOption === 'immediate'
+                      form.publishOption === 'review'
                         ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                         : 'bg-muted text-muted-foreground'
                     )}>
                       <Send className="size-5" />
                     </div>
-                    <Label htmlFor="immediate" className="cursor-pointer">
-                      <span className="text-[15px] font-bold block">Submit for Admin Review</span>
+                    <Label htmlFor="review" className="cursor-pointer">
+                      <span className="text-[15px] font-bold block">Submit for Review</span>
                       <span className="text-[12px] text-muted-foreground block mt-0.5">
-                        Your course will be reviewed and goes live once approved
+                        Your course will be submitted to admins for review and approval
                       </span>
                     </Label>
                   </div>
 
                   <AnimatePresence>
-                    {form.publishOption === 'immediate' && (
+                    {form.publishOption === 'review' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -595,15 +604,15 @@ export function Step6Review({
                         <div className="mt-4 ml-[52px] rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/30 p-3 space-y-2">
                           <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 className="size-3.5 shrink-0" />
-                            <span>Course submitted to admin for quality review</span>
+                            <span>Course will be reviewed by admin</span>
                           </div>
                           <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 className="size-3.5 shrink-0" />
-                            <span>You&apos;ll be notified when approved or if changes needed</span>
+                            <span>Available to students after approval</span>
                           </div>
                           <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 className="size-3.5 shrink-0" />
-                            <span>Course goes live immediately after approval</span>
+                            <span>Admin review typically takes 24–48 hours</span>
                           </div>
                         </div>
                       </motion.div>
@@ -752,7 +761,7 @@ export function Step6Review({
         </div>
 
         {/* ─── Admin Review Notice ─── */}
-        {form.publishOption !== 'draft' && (
+        {form.publishOption === 'scheduled' && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -765,10 +774,10 @@ export function Step6Review({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">
-                  Admin Review Required
+                  Admin Review Required for Scheduling
                 </p>
                 <p className="text-[12px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
-                  All courses go through an admin review before becoming visible to students. This ensures quality standards are met. Review typically takes 24–48 hours.
+                  Scheduled courses go through an admin review before becoming visible. Review typically takes 24–48 hours.
                 </p>
               </div>
             </div>

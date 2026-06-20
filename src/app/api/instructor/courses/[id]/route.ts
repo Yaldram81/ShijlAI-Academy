@@ -244,28 +244,24 @@ export async function PATCH(
     }
 
     const updateData: Record<string, unknown> = {}
-    const allowedFields = ['title', 'description', 'category', 'level', 'language', 'price', 'thumbnail', 'isArchived', 'certificateEnabled', 'completionThreshold', 'estimatedDuration', 'learningObjectives', 'prerequisites', 'targetAudience', 'tags', 'reviewStatus', 'submittedForReviewAt']
+    const allowedFields = ['title', 'description', 'category', 'level', 'language', 'price', 'thumbnail', 'isArchived', 'certificateEnabled', 'completionThreshold', 'estimatedDuration', 'learningObjectives', 'prerequisites', 'targetAudience', 'tags', 'reviewStatus', 'submittedForReviewAt', 'isPublished']
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field]
       }
     }
 
-    // Security: Instructors cannot set isPublished directly — that's done via admin review approval
-    // Remove isPublished from updateData if instructor tries to set it
-    delete updateData.isPublished
-
-    // Security: Only allow valid reviewStatus transitions by instructor
-    // Instructor can: draft → pending (submit for review), changes_requested → pending (re-submit), any → draft (save as draft)
+    // Allow instructors to set isPublished directly (bypass admin review if desired)
+    // Instructor can: draft → pending (submit for review), changes_requested → pending (re-submit), any → draft (save as draft), any -> approved (direct publish)
     if (updateData.reviewStatus !== undefined) {
       const currentStatus = existing.reviewStatus
       const newStatus = updateData.reviewStatus as string
       const allowedTransitions: Record<string, string[]> = {
-        draft: ['pending'],
-        pending: ['draft'],
-        changes_requested: ['pending', 'draft'],
-        rejected: ['pending', 'draft'],
-        under_review: ['draft'], // can withdraw
+        draft: ['pending', 'approved'],
+        pending: ['draft', 'approved'],
+        changes_requested: ['pending', 'draft', 'approved'],
+        rejected: ['pending', 'draft', 'approved'],
+        under_review: ['draft', 'approved'], // can withdraw or direct publish
         approved: ['draft'], // can unpublish (goes back to draft)
       }
       const allowed = allowedTransitions[currentStatus] || []

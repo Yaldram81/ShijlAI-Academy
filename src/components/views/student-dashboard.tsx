@@ -308,7 +308,7 @@ function CardSkeleton() {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StudentDashboard() {
-  const { currentUser, setCurrentView, enrollments, setEnrollments } = useAppStore()
+  const { currentUser, setCurrentView, enrollments, setEnrollments, setSelectedCourseId } = useAppStore()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [gamification, setGamification] = useState<GamificationData | null>(null)
   const [dailyPlan, setDailyPlan] = useState<DailyPlanData | null>(null)
@@ -672,7 +672,7 @@ export function StudentDashboard() {
           </div>
         ) : (
           <div className="rounded-2xl ios-shadow-sm bg-card overflow-hidden ios-press cursor-pointer"
-               onClick={() => setCurrentView('courses')}>
+               onClick={() => { setSelectedCourseId(latestEnrollment.courseId); setCurrentView('course-player') }}>
             <div className="flex flex-col sm:flex-row">
               {/* Thumbnail */}
               <div className={`relative w-full sm:w-48 h-32 sm:h-auto bg-gradient-to-br ${categoryGradients[latestEnrollment.course?.category || ''] || 'from-emerald-500 to-teal-600'} flex items-center justify-center shrink-0`}>
@@ -725,7 +725,7 @@ export function StudentDashboard() {
                 <Button
                   className="w-full sm:w-auto rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white ios-press"
                   size="sm"
-                  onClick={(e) => { e.stopPropagation(); setCurrentView('courses') }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedCourseId(latestEnrollment.courseId); setCurrentView('course-player') }}
                 >
                   <Play className="size-3.5 mr-1.5" />
                   Continue Learning
@@ -942,7 +942,7 @@ export function StudentDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...springTransition, delay: 0.18 + i * 0.05 }}
                   className="rounded-2xl ios-shadow-sm bg-card overflow-hidden min-w-[260px] lg:min-w-0 group hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => setCurrentView('courses')}
+                  onClick={() => { setSelectedCourseId(course.id); setCurrentView('course-detail') }}
                 >
                   {/* Thumbnail with gradient */}
                   <div className={`relative h-28 bg-gradient-to-br ${categoryGradients[course.category] || 'from-emerald-500 to-teal-600'} flex items-center justify-center`}>
