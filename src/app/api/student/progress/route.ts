@@ -116,11 +116,11 @@ export async function GET(request: Request) {
     // SKILLS DATA
     // ══════════════════════════════════════
     const userSkills = await db.userSkill.findMany({
-      where: { userId: effectiveUserId }, include: { skill: true }, orderBy: { progress: 'desc' },
+      where: { userId: effectiveUserId }, include: { skill: true }, orderBy: { overallScore: 'desc' },
     })
     const skills = userSkills.map(us => ({
       id: us.id, skillId: us.skillId, name: us.skill.name, category: us.skill.category,
-      icon: us.skill.icon, level: us.level, progress: us.progress, xpEarned: us.xpEarned,
+      icon: us.skill.icon, level: us.level, progress: us.overallScore, xpEarned: us.xpEarned,
     }))
 
     // ══════════════════════════════════════

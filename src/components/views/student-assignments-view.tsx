@@ -273,7 +273,7 @@ function UpcomingDeadlinesWidget({ assignments, onViewDetail }: {
               <div className={cn('size-2.5 rounded-full shrink-0', config.color)} />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-medium truncate">{a.title}</p>
-                <p className="text-[11px] text-muted-foreground">{a.courseName}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{a.courseName}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className={cn('text-[11px] font-semibold', getDaysLeftColor(a.daysLeft, a.isOverdue))}>
@@ -1695,7 +1695,7 @@ export function StudentAssignmentsView() {
               })}
 
               {/* Search input */}
-              <div className="relative flex-1 max-w-xs">
+              <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                 <Input
                   ref={searchInputRef}

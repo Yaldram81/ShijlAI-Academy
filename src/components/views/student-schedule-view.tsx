@@ -1536,11 +1536,19 @@ export function StudentScheduleView() {
   }
 
   const handleStatusChange = async (eventId: string, status: string) => {
+    // For non-custom events (assignments, quizzes, live sessions) with synthetic IDs,
+    // update local state only since they aren't in the scheduleEvent table
+    const event = events.find(e => e.id === eventId)
+    if (!event || event.source !== 'custom') {
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, status } : e))
+      toast.success(`Event marked as ${status}`)
+      return
+    }
     try {
       const res = await fetch('/api/student/schedule', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, status }),
+        body: JSON.stringify({ eventId, status, userId }),
       })
       if (!res.ok) throw new Error()
       toast.success(`Event marked as ${status}`)
