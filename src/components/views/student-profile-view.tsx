@@ -11,6 +11,7 @@ import {
   MessageSquare, ArrowRight, Eye,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -269,7 +270,7 @@ function EmptyState({ icon: Icon, title, description, action }: {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function StudentProfileView() {
-  const { currentUser, setCurrentView } = useAppStore()
+  const { currentUser, setCurrentUser, setCurrentView } = useAppStore()
 
   // Data state
   const [profileData, setProfileData] = useState<StudentProfileData | null>(null)
@@ -490,15 +491,40 @@ export function StudentProfileView() {
       })
       if (res.ok) {
         const updated = await res.json()
-        setProfileData(prev => prev ? { ...prev, user: { ...prev.user, ...updated.user } } : prev)
+        // Re-build transformed user from API response
+        const pi = updated.personalInfo || {}
+        const st = updated.settings || {}
+        const updatedUser = {
+          ...currentUser,
+          name: pi.name || currentUser.name,
+          bio: pi.bio ?? currentUser.bio,
+        }
+        setCurrentUser(updatedUser as typeof currentUser)
+        setProfileData(prev => prev ? {
+          ...prev,
+          user: {
+            ...prev.user,
+            name: pi.name || prev.user.name,
+            bio: pi.bio ?? prev.user.bio,
+            phone: pi.phone ?? prev.user.phone,
+            headline: st.headline ?? prev.user.headline,
+            location: st.location ?? prev.user.location,
+            website: st.website ?? prev.user.website,
+            linkedin: st.linkedin ?? prev.user.linkedin,
+          },
+        } : prev)
         setEditDialogOpen(false)
+        toast.success('Profile updated successfully!')
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Failed to update profile')
       }
     } catch {
-      // Silently handle — could add toast notification
+      toast.error('Failed to update profile. Please try again.')
     } finally {
       setSaving(false)
     }
-  }, [currentUser, editForm])
+  }, [currentUser, editForm, setCurrentUser])
 
   // ─── Avatar Upload Handler ──────────────────────────────────────────────
 
@@ -507,8 +533,14 @@ export function StudentProfileView() {
     if (!file || !currentUser) return
 
     // Validate file type and size
-    if (!file.type.startsWith('image/')) return
-    if (file.size > 5 * 1024 * 1024) return // 5MB max
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB')
+      return
+    }
 
     setAvatarUploading(true)
     try {
@@ -516,7 +548,7 @@ export function StudentProfileView() {
       reader.onload = async () => {
         const base64 = reader.result as string
         try {
-          const res = await fetch('/api/student/profile/avatar', {
+          const res = await fetch('/api/student/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentId: currentUser.id, avatar: base64 }),
@@ -524,9 +556,15 @@ export function StudentProfileView() {
           if (res.ok) {
             const json = await res.json()
             setProfileData(prev => prev ? { ...prev, user: { ...prev.user, avatar: json.avatar } } : prev)
+            // Sync to global store so header avatar updates
+            setCurrentUser({ ...currentUser, avatar: json.avatar })
+            toast.success('Profile photo updated!')
+          } else {
+            const err = await res.json().catch(() => ({}))
+            toast.error(err.error || 'Failed to upload photo')
           }
         } catch {
-          // Silently handle
+          toast.error('Failed to upload photo')
         } finally {
           setAvatarUploading(false)
         }
@@ -534,30 +572,35 @@ export function StudentProfileView() {
       reader.readAsDataURL(file)
     } catch {
       setAvatarUploading(false)
+      toast.error('Failed to read image file')
     }
     // Reset input so the same file can be re-selected
     e.target.value = ''
-  }, [currentUser])
+  }, [currentUser, setCurrentUser])
 
   const handleAvatarDelete = useCallback(async () => {
     if (!currentUser) return
     setAvatarUploading(true)
     try {
-      const res = await fetch('/api/student/profile/avatar', {
+      const res = await fetch('/api/student/profile', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId: currentUser.id }),
       })
       if (res.ok) {
         setProfileData(prev => prev ? { ...prev, user: { ...prev.user, avatar: null } } : prev)
+        setCurrentUser({ ...currentUser, avatar: null })
+        toast.success('Profile photo removed')
+      } else {
+        toast.error('Failed to remove photo')
       }
     } catch {
-      // Silently handle
+      toast.error('Failed to remove photo')
     } finally {
       setAvatarUploading(false)
       setAvatarDeleteDialogOpen(false)
     }
-  }, [currentUser])
+  }, [currentUser, setCurrentUser])
 
   // ─── Share Handler ──────────────────────────────────────────────────────
 

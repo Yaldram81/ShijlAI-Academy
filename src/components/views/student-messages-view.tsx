@@ -174,6 +174,7 @@ export function StudentMessagesView() {
   const messageInputRef = useRef<HTMLTextAreaElement>(null)
   const editInputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // ─── Fetch conversations ───
@@ -268,6 +269,61 @@ export function StudentMessagesView() {
       setSendingMessage(false)
     }
   }
+
+  // ─── File / Image upload as message ───
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image') => {
+    const file = e.target.files?.[0]
+    if (!file || !activeConvId || !studentId) return
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File must be smaller than 10MB')
+      return
+    }
+    try {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const base64 = reader.result as string
+        const content = type === 'image'
+          ? `[IMAGE:${file.name}]${base64}`
+          : `[FILE:${file.name}]${base64}`
+        const res = await fetch('/api/student/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'send',
+            studentId,
+            conversationId: activeConvId,
+            content: type === 'image' ? `📷 ${file.name}` : `📎 ${file.name}`,
+          }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.message?.id) {
+            const newMsg: ChatMessage = {
+              id: data.message.id,
+              senderId: studentId,
+              senderName: 'You',
+              content: type === 'image' ? `📷 ${file.name}` : `📎 ${file.name}`,
+              timestamp: data.message.timestamp,
+              dateStr: data.message.dateStr || 'Today',
+              read: false,
+              isOwn: true,
+              type: type === 'image' ? 'image' : 'file',
+              attachments: base64 || null,
+            }
+            setActiveConversation(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : null)
+          }
+          toast.success(`${type === 'image' ? 'Image' : 'File'} sent!`)
+          fetchConversations()
+        } else {
+          toast.error(`Failed to send ${type}`)
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      toast.error(`Failed to send ${type}`)
+    }
+    e.target.value = ''
+  }, [activeConvId, studentId, fetchConversations])
 
   // ─── Start new conversation ───
   const handleStartConversation = async () => {
@@ -975,17 +1031,30 @@ export function StudentMessagesView() {
                     </TooltipTrigger>
                     <TooltipContent>Attach file</TooltipContent>
                   </Tooltip>
-                  <input ref={fileInputRef} type="file" className="hidden" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.zip,.ppt,.pptx,.xls,.xlsx"
+                    onChange={(e) => handleFileUpload(e, 'file')}
+                  />
 
                   {/* Image upload button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-9 rounded-lg shrink-0 text-muted-foreground hover:text-foreground">
+                      <Button variant="ghost" size="icon" className="size-9 rounded-lg shrink-0 text-muted-foreground hover:text-foreground" onClick={() => imageInputRef.current?.click()}>
                         <ImagePlus className="size-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Upload image</TooltipContent>
                   </Tooltip>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'image')}
+                  />
 
                   {/* Text input area */}
                   <div className="flex-1 relative">

@@ -183,7 +183,7 @@ async function buildProfileResponse(studentId: string) {
     where: { userId: studentId },
     select: {
       level: true,
-      progress: true,
+      overallScore: true,
       skill: {
         select: { name: true, category: true },
       },
@@ -319,7 +319,7 @@ async function buildProfileResponse(studentId: string) {
       name: us.skill.name,
       category: us.skill.category,
       level: us.level,
-      progress: us.progress,
+      progress: us.overallScore,
     })),
     badges: userBadges.map((ub) => ({
       name: ub.badge.name,
