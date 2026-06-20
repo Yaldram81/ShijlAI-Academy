@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logEvent } from '@/services/learning-engine'
 import { getWeakTopics } from '@/services/learning-engine'
+import { AIService } from '@/services/ai'
 
 const MODE_PROMPTS: Record<string, string> = {
   tutor: `You are ShijlAI, a warm and friendly AI learning buddy. Talk to the student like a knowledgeable friend who genuinely cares — NOT like a teacher giving a lecture or a textbook. Be conversational, encouraging, and relatable.
@@ -110,6 +111,12 @@ export async function POST(request: NextRequest) {
 
     if (!userId || !message) {
       return NextResponse.json({ error: 'userId and message are required' }, { status: 400 })
+    }
+
+    // Validate user exists
+    const user = await db.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found. Please log in again.' }, { status: 401 })
     }
 
     // Get or create session
@@ -249,18 +256,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call LLM
-    const ZAI = (await import('z-ai-web-dev-sdk')).default
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'assistant', content: systemPrompt },
-        ...messageHistory,
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const aiResponse = completion.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response. Please try again.'
+    // Call LLM using AIService
+    const aiResponse = await AIService.chat({
+      systemPrompt,
+      messages: messageHistory,
+      complexity: 'fast',
+      feature: 'shijlai_chat',
+      userId,
+      sessionId: session.id,
+    });
 
     // Save AI response
     const assistantMessage = await db.shijlAIMessage.create({
@@ -293,18 +297,14 @@ export async function POST(request: NextRequest) {
           .map(m => `${m.role}: ${m.content}`)
           .join('\n')
 
-        const summaryCompletion = await zai.chat.completions.create({
-          messages: [
-            {
-              role: 'assistant',
-              content: 'Summarize this conversation concisely, highlighting key topics discussed, concepts explained, and questions asked. Output as a brief paragraph.',
-            },
-            { role: 'user', content: conversationText },
-          ],
-          thinking: { type: 'disabled' },
-        })
-
-        const summaryText = summaryCompletion.choices[0]?.message?.content || ''
+        const summaryText = await AIService.chat({
+          systemPrompt: 'Summarize this conversation concisely, highlighting key topics discussed, concepts explained, and questions asked. Output as a brief paragraph.',
+          messages: [{ role: 'user', content: conversationText }],
+          complexity: 'fast',
+          feature: 'shijlai_chat_summary',
+          userId,
+          sessionId: session.id,
+        });
         if (summaryText) {
           await db.conversationSummary.create({
             data: {
@@ -363,8 +363,8 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
       mode,
     })
-  } catch (error) {
-    console.error('[ShijlAI Chat] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[ShijlAI Chat] Error:', error?.message || error)
+    return NextResponse.json({ error: 'Internal server error', details: error?.message }, { status: 500 })
   }
 }

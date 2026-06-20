@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
     if (status === 'published') {
       where.isPublished = true;
       where.isArchived = false;
+    } else if (status === 'pending') {
+      where.reviewStatus = 'pending';
     } else if (status === 'under_review') {
       where.reviewStatus = 'under_review';
     } else if (status === 'draft') {
@@ -45,8 +47,10 @@ export async function GET(request: NextRequest) {
       where.reviewStatus = 'rejected';
     } else if (status === 'changes_requested') {
       where.reviewStatus = 'changes_requested';
+    } else {
+      // "all" => exclude drafts so admin doesn't see instructor work-in-progress
+      where.reviewStatus = { not: 'draft' };
     }
-    // "all" => no status filter
 
     if (category) {
       where.category = category;
@@ -151,13 +155,15 @@ export async function GET(request: NextRequest) {
     const [
       totalCourses,
       publishedCourses,
+      pendingReviewCourses,
       underReviewCourses,
       draftCourses,
       archivedCourses,
       flaggedCourses,
     ] = await Promise.all([
-      db.course.count(),
+      db.course.count({ where: { reviewStatus: { not: 'draft' } } }),
       db.course.count({ where: { isPublished: true, isArchived: false } }),
+      db.course.count({ where: { reviewStatus: 'pending' } }),
       db.course.count({ where: { reviewStatus: 'under_review' } }),
       db.course.count({ where: { reviewStatus: 'draft', isPublished: false } }),
       db.course.count({ where: { isArchived: true } }),
@@ -167,6 +173,7 @@ export async function GET(request: NextRequest) {
     const stats = {
       total: totalCourses,
       published: publishedCourses,
+      pendingReview: pendingReviewCourses,
       underReview: underReviewCourses,
       draft: draftCourses,
       archived: archivedCourses,

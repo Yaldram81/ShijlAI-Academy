@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { AIService } from '@/services/ai'
 
 // ═══════════════════════════════════════════════════════════════════
 // ─── Types ────────────────────────────────────────────────────────
@@ -919,9 +920,6 @@ async function fetchPlatformOverview() {
 
 async function generateLLMResponse(query: string, intent: CopilotIntent, data: any): Promise<string> {
   try {
-    const ZAI = (await import('z-ai-web-dev-sdk')).default
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are the AI Admin Copilot — an intelligence assistant for ShijlAI Academy administrators. You have access to REAL platform data and must base your analysis on it.
 
 CRITICAL RULES:
@@ -935,16 +933,18 @@ CRITICAL RULES:
 PLATFORM DATA:
 ${JSON.stringify(data, null, 2)}`
 
-    const completion = await zai.chat.completions.create({
+    const response = await AIService.chat({
+      systemPrompt,
       messages: [
-        { role: 'assistant', content: systemPrompt },
-        { role: 'user', content: `Admin Question: ${query}\n\nIntent: ${intent}\n\nProvide a clear, data-driven analysis with actionable recommendations.` },
+        { role: 'user', content: `Admin Question: ${query}\n\nIntent: ${intent}\n\nProvide a clear, data-driven analysis with actionable recommendations.` }
       ],
-      thinking: { type: 'disabled' },
+      complexity: 'complex',
+      feature: 'admin_copilot',
     })
 
-    return completion.choices[0]?.message?.content || 'Unable to generate analysis. Please try again.'
+    return response || 'Unable to generate analysis. Please try again.'
   } catch (error) {
+
     console.error('[AdminCopilot] LLM Error:', error)
     // Fallback: generate a rule-based response from the data
     return generateRuleBasedResponse(query, intent, data)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import ZAI from 'z-ai-web-dev-sdk';
+import { AIService } from '@/services/ai';
 
 const SYSTEM_PROMPT_EN = `You are Ask ShijlAI, an AI-powered educational assistant for students worldwide on the ShijlAI Academy platform — a global learning academy. You guide students using the Socratic method - asking probing questions rather than giving direct answers. Be encouraging but rigorous.
 
@@ -120,19 +120,15 @@ export async function POST(request: Request) {
       contextPrompt += `\n\nThe student prefers to communicate in ${lang}. Respond in the student's preferred language, but keep technical terms and code in English.`;
     }
 
-    // Call AI using z-ai-web-dev-sdk
-    const ai = await ZAI.create();
-    const response = await ai.chat.completions.create({
-      model: 'default',
-      messages: [
-        { role: 'system', content: contextPrompt },
-        ...chatHistory,
-      ],
+    // Call AI using AIService
+    const aiResponse = await AIService.chat({
+      systemPrompt: contextPrompt,
+      messages: chatHistory,
+      complexity: 'fast',
+      feature: 'tutor',
+      userId: validUserId,
+      sessionId: activeSessionId,
     });
-
-    const aiResponse =
-      response.choices?.[0]?.message?.content ||
-      "I'm here to help! Could you rephrase your question?";
 
     // Save assistant message
     await db.chatMessage.create({

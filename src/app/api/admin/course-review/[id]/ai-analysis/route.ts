@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import ZAI from 'z-ai-web-dev-sdk';
+import { AIService } from '@/services/ai';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ You MUST respond in valid JSON format with these exact keys:
 Be thorough, specific, and fair in your analysis. Consider the international education context and global market conditions.`;
 
 // ─── POST /api/admin/course-review/[id]/ai-analysis ─────────────────────────
-// AI-powered course content analysis using z-ai-web-dev-sdk
+// AI-powered course content analysis using Gemini API
 
 export async function POST(
   request: NextRequest,
@@ -222,52 +222,13 @@ export async function POST(
     let aiSuccess = false;
 
     try {
-      const zai = await ZAI.create();
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: 'system', content: COURSE_REVIEWER_SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
-        ],
-        thinking: { type: 'disabled' },
+      const parsedResponse = await AIService.generateJSON<any>({
+        systemPrompt: COURSE_REVIEWER_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userMessage }],
+        complexity: 'complex',
+        feature: 'admin_course_review',
+        courseId: id,
       });
-
-      const responseContent = completion.choices[0]?.message?.content ?? '';
-
-      // Parse AI response - try to extract JSON from the response
-      let parsedResponse: any = null;
-
-      // Try direct JSON parse first
-      try {
-        parsedResponse = JSON.parse(responseContent);
-      } catch {
-        // Try to extract JSON from markdown code blocks
-        const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) {
-          try {
-            parsedResponse = JSON.parse(jsonMatch[1].trim());
-          } catch {
-            // Try finding JSON object in the response
-            const objectMatch = responseContent.match(/\{[\s\S]*\}/);
-            if (objectMatch) {
-              try {
-                parsedResponse = JSON.parse(objectMatch[0]);
-              } catch {
-                // Give up parsing
-              }
-            }
-          }
-        } else {
-          // Try finding JSON object in the response without code blocks
-          const objectMatch = responseContent.match(/\{[\s\S]*\}/);
-          if (objectMatch) {
-            try {
-              parsedResponse = JSON.parse(objectMatch[0]);
-            } catch {
-              // Give up parsing
-            }
-          }
-        }
-      }
 
       if (parsedResponse && typeof parsedResponse === 'object') {
         aiResponse = {
@@ -437,3 +398,4 @@ function buildPartialAnalysis(courseData: any): AIAnalysisResult {
     analyzedByAI: false,
   };
 }
+

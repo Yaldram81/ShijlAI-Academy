@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ZAI from 'z-ai-web-dev-sdk';
+import { AIService } from '@/services/ai';
 
 const SYSTEM_PROMPT = `You are Ask ShijlAI, an AI-powered educational assistant for students on the ShijlAI Academy platform — a global learning academy serving students worldwide. You are warm, encouraging, and use the Socratic method to guide students toward understanding rather than just giving answers.
 
@@ -122,20 +122,13 @@ export async function POST(request: Request) {
       content: msg.content,
     }));
 
-    // Call AI using z-ai-web-dev-sdk
-    const zai = await ZAI.create();
-    const response = await zai.chat.completions.create({
-      model: 'default',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...formattedMessages,
-      ],
-      thinking: { type: 'disabled' },
+    // Call AI using AIService
+    const aiResponse = await AIService.chat({
+      systemPrompt,
+      messages: formattedMessages,
+      complexity: 'fast',
+      feature: 'chat',
     });
-
-    const aiResponse =
-      response.choices?.[0]?.message?.content ||
-      "I'm here to help! Could you rephrase your question?";
 
     return NextResponse.json({
       message: aiResponse,

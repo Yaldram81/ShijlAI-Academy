@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { sendEmail, welcomeEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +29,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Check OTP expiry first (don't leak timing info about OTP value)
+    if (!user.otpExpiresAt || new Date(user.otpExpiresAt) < new Date()) {
+      return NextResponse.json(
+        { error: 'OTP code has expired. Please request a new one.' },
+        { status: 401 }
+      )
+    }
+
     // Check OTP match
     if (user.otpCode !== otpCode) {
       return NextResponse.json(
@@ -36,15 +45,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check OTP expiry
-    if (!user.otpExpiresAt || new Date(user.otpExpiresAt) < new Date()) {
-      return NextResponse.json(
-        { error: 'OTP code has expired. Please request a new one.' },
-        { status: 401 }
-      )
-    }
-
-    // Verify user
+    // Verify user and clear OTP
     const updatedUser = await db.user.update({
       where: { id: user.id },
       data: {
@@ -52,6 +53,11 @@ export async function POST(req: NextRequest) {
         otpCode: null,
         otpExpiresAt: null,
       },
+    })
+
+    // Send welcome email (fire-and-forget)
+    sendEmail(welcomeEmail({ fullName: updatedUser.name, email: updatedUser.email, role: updatedUser.role })).catch((err) => {
+      console.error('[verify-otp] Failed to send welcome email:', err instanceof Error ? err.message : 'Unknown')
     })
 
     return NextResponse.json({
@@ -65,7 +71,7 @@ export async function POST(req: NextRequest) {
       message: 'Email verified successfully',
     })
   } catch (error) {
-    console.error('Verify OTP error:', error)
+    console.error('[verify-otp] Error:', error instanceof Error ? error.message : 'Unknown')
     return NextResponse.json(
       { error: 'Verification failed' },
       { status: 500 }

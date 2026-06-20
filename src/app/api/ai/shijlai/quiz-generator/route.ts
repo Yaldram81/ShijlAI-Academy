@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/ai/shijlai/quiz-generator
 export async function POST(request: NextRequest) {
@@ -32,32 +32,24 @@ export async function POST(request: NextRequest) {
 
     const typesStr = Array.isArray(questionTypes) ? questionTypes.join(', ') : questionTypes
 
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: `You are a quiz generation engine for ShijlAI Academy. Generate quiz questions in the specified format. Each question should have: type (one of: ${typesStr}), text, options (for mcq: array of 4 strings), correctAnswer, explanation, points (1-5). Return as a JSON array of question objects.`,
-        },
-        {
-          role: 'user',
-          content: `Generate ${questionCount} ${difficulty} difficulty quiz questions about "${topic}".${courseContext}\nQuestion types: ${typesStr}\nReturn only the JSON array.`,
-        },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const responseText = completion.choices[0]?.message?.content || '[]'
-
-    // Parse questions
+    // Call AIService using generateJSON
     let questions: Array<Record<string, unknown>> = []
     try {
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        questions = JSON.parse(jsonMatch[0])
-      }
-    } catch {
-      console.error('Failed to parse quiz questions JSON')
+      questions = await AIService.generateJSON<Array<Record<string, unknown>>>({
+        systemPrompt: `You are a quiz generation engine for ShijlAI Academy. Generate quiz questions in the specified format. Each question should have: type (one of: ${typesStr}), text, options (for mcq: array of 4 strings), correctAnswer, explanation, points (1-5). Return as a JSON array of question objects.`,
+        messages: [
+          {
+            role: 'user',
+            content: `Generate ${questionCount} ${difficulty} difficulty quiz questions about "${topic}".${courseContext}\nQuestion types: ${typesStr}\nReturn only the JSON array.`,
+          },
+        ],
+        complexity: 'fast',
+        feature: 'quiz_generator',
+        userId: instructorId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate quiz questions JSON:', err)
     }
 
     // Save generation record

@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    
-    const zai = await ZAI.create()
     
     // Build a structured prompt from the data
     const systemPrompt = `You are an AI System Intelligence analyst for ShijlAI Academy, an e-learning platform. 
@@ -50,18 +48,20 @@ ${(data.engagement?.courseEngagement || []).filter((c: any) => c.engagementScore
   `- ${c.courseTitle}: Engagement ${c.engagementScore}/100`
 ).join('\n')}`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'assistant', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      thinking: { type: 'disabled' }
-    })
-
-    const aiInsights = completion.choices[0]?.message?.content || ''
+    let aiInsights = ''
+    try {
+      aiInsights = await AIService.chat({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'complex',
+        feature: 'system_intelligence_insights',
+      })
+    } catch (err) {
+      console.error('[SystemIntelligence:GenerateInsights] AIService error:', err)
+    }
 
     return NextResponse.json({ 
-      insights: aiInsights,
+      insights: aiInsights || 'Platform analysis is currently unavailable.',
       generatedAt: new Date().toISOString()
     })
   } catch (error) {
@@ -72,3 +72,4 @@ ${(data.engagement?.courseEngagement || []).filter((c: any) => c.engagementScore
     )
   }
 }
+

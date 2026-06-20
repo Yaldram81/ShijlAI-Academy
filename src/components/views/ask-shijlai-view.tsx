@@ -381,8 +381,9 @@ export function AskShijlAIView() {
 
   // ─── Data Loading ───
   const loadPastSessions = async () => {
+    if (!currentUser?.id) return
     try {
-      const res = await fetch(`/api/ai/shijlai/sessions?userId=${currentUser?.id || 'demo-user-1'}`)
+      const res = await fetch(`/api/ai/shijlai/sessions?userId=${currentUser.id}`)
       if (res.ok) {
         const data = await res.json()
         setPastSessions(data.sessions || [])
@@ -395,7 +396,7 @@ export function AskShijlAIView() {
   const loadLearningProfile = async () => {
     setProfileLoading(true)
     try {
-      const res = await fetch(`/api/ai/shijlai/profile?userId=${currentUser?.id || 'demo-user-1'}`)
+      const res = await fetch(`/api/ai/shijlai/profile?userId=${currentUser?.id || ''}`)
       if (res.ok) {
         const data = await res.json()
         const rawProfile = data.profile || null
@@ -466,7 +467,7 @@ export function AskShijlAIView() {
 
   const loadRecommendations = async () => {
     try {
-      const res = await fetch(`/api/ai/shijlai/recommendations?userId=${currentUser?.id || 'demo-user-1'}&status=active`)
+      const res = await fetch(`/api/ai/shijlai/recommendations?userId=${currentUser?.id || ''}&status=active`)
       if (res.ok) {
         const data = await res.json()
         if (data.recommendations && data.recommendations.length > 0) {
@@ -520,6 +521,11 @@ export function AskShijlAIView() {
   const sendMessage = async (text: string, quickAction?: string) => {
     if (!text.trim() || isLoading) return
 
+    if (!currentUser?.id) {
+      toast.error('Please log in to use Ask ShijlAI.')
+      return
+    }
+
     const userMsg: ChatMsg = {
       id: `msg-${Date.now()}`,
       role: 'user',
@@ -537,7 +543,7 @@ export function AskShijlAIView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: currentUser?.id || 'demo-user-1',
+          userId: currentUser.id,
           message: text.trim(),
           mode: activeMode,
           sessionId: sessionId || undefined,

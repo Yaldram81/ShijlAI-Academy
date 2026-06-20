@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // GET /api/instructor/analytics/insights - AI-generated teaching insights
 export async function GET(request: NextRequest) {
@@ -162,15 +162,9 @@ Recent Reviews:
 ${allReviews.slice(0, 5).map((r) => `- Rating: ${r.rating}/5${r.content ? `, Comment: "${r.content.substring(0, 100)}"` : ''}`).join('\n')}
 `.trim()
 
-    // Generate AI insights
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert educational analytics consultant for the ShijlAI Academy platform. You analyze instructor data and provide structured, actionable insights about their teaching performance, student engagement, and revenue. You focus on international education contexts (IB, AP, Cambridge, etc.).
+    const systemPrompt = `You are an expert educational analytics consultant for the ShijlAI Academy platform. You analyze instructor data and provide structured, actionable insights about their teaching performance, student engagement, and revenue. You focus on international education contexts (IB, AP, Cambridge, etc.).
 
-You MUST respond with a valid JSON object (no markdown, no code blocks) with this exact structure:
+You MUST respond with a valid JSON object with this exact structure:
 {
   "insights": [
     {
@@ -187,28 +181,23 @@ You MUST respond with a valid JSON object (no markdown, no code blocks) with thi
 }
 
 Generate 4-8 insights covering different aspects (achievements, warnings, opportunities, suggestions). Be specific and data-driven. Use the actual numbers provided.`
-        },
-        {
-          role: 'user',
-          content: `Analyze this instructor's analytics data and generate structured insights:\n\n${dataSummary}`
-        }
-      ],
-      thinking: { type: 'disabled' },
-    })
 
-    const responseText = completion.choices[0]?.message?.content ?? ''
+    const userPrompt = `Analyze this instructor's analytics data and generate structured insights:\n\n${dataSummary}`
 
-    // Parse the AI response
-    let parsedResponse
+    let parsedResponse: any = null
     try {
-      // Try to extract JSON from the response (in case it has markdown code blocks)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
-      }
-    } catch {
+      parsedResponse = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'instructor_analytics_insights',
+        userId: instructorId,
+      })
+    } catch (err) {
+      console.error('Failed to generate analytics insights JSON:', err)
+    }
+
+    if (!parsedResponse) {
       // Fallback if AI doesn't return valid JSON
       parsedResponse = {
         insights: [
@@ -270,3 +259,4 @@ Generate 4-8 insights covering different aspects (achievements, warnings, opport
     )
   }
 }
+

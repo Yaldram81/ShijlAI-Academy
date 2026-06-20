@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/improve-bio - Improve an instructor's bio using AI
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { bio, headline } = body
+    const { bio, headline, moduleId, courseId } = body
 
     if (!bio) {
       return NextResponse.json({ error: 'Bio is required' }, { status: 400 })
     }
-
-    const zai = await ZAI.create()
 
     const systemPrompt = `You are an expert profile writer for online course instructors. Your goal is to improve instructor bios to be professional, engaging, SEO-friendly, and highlight the instructor's expertise and achievements. Keep the bio concise (under 300 words). Use active voice and compelling language. Focus on credibility, experience, and what makes the instructor unique. Avoid generic clichés and buzzwords.`
 
@@ -30,15 +28,19 @@ ${headline ? '- Aligns well with the provided headline' : ''}
 
 Return only the improved bio text.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
+    let response = ''
+    try {
+      response = await AIService.chat({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'improve_bio',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to improve bio via AIService:', err)
+    }
 
     if (!response) {
       return NextResponse.json(
@@ -59,3 +61,4 @@ Return only the improved bio text.`
     )
   }
 }
+

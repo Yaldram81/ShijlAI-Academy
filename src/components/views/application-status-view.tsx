@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -153,15 +153,16 @@ export function ApplicationStatusView() {
   const [application, setApplication] = useState<any>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleLookup = useCallback(async () => {
-    if (!trackingCode.trim()) {
+  const handleLookup = useCallback(async (codeOverride?: string) => {
+    const code = (codeOverride || trackingCode).trim()
+    if (!code) {
       setError('Please enter your tracking code')
       return
     }
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`/api/instructor-applications?code=${encodeURIComponent(trackingCode.trim())}`)
+      const res = await fetch(`/api/instructor-applications?code=${encodeURIComponent(code)}`)
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Application not found')
@@ -176,6 +177,18 @@ export function ApplicationStatusView() {
       setLoading(false)
     }
   }, [trackingCode])
+
+  // Auto-lookup if ?code=XXX is in URL (from email tracking link)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code) {
+      setTrackingCode(code.toUpperCase())
+      handleLookup(code.toUpperCase())
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCopy = useCallback(() => {
     if (application?.applicationCode) {

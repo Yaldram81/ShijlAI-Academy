@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // ─── Types ───
 type ReportType = 'platform_performance' | 'course_performance' | 'instructor_performance' | 'student_engagement' | 'ai_usage'
@@ -356,7 +356,6 @@ export async function POST(request: NextRequest) {
     // Use LLM to generate summary
     let reportSummary: Record<string, unknown> = {}
     try {
-      const zai = await ZAI.create()
       const prompt = `Analyze the following LMS metrics for a ${reportType} report covering ${period} period.
 Generate:
 1. Executive Summary (2-3 sentences)
@@ -369,21 +368,17 @@ Maximum 300 words total.
 Metrics:
 ${JSON.stringify(computedMetrics, null, 2)}`
 
-      const completion = await zai.chat.completions.create({
-        messages: [
-          {
-            role: 'assistant',
-            content: 'You are an LMS analytics expert. Analyze the provided metrics and generate a concise report.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        thinking: { type: 'disabled' },
+      const summaryText = await AIService.chat({
+        systemPrompt: 'You are an LMS analytics expert. Analyze the provided metrics and generate a concise report.',
+        messages: [{ role: 'user', content: prompt }],
+        complexity: 'complex',
+        feature: 'admin_reports',
+        userId: generatedBy || undefined,
+        courseId: courseId || undefined,
       })
 
-      const summaryText = completion.choices?.[0]?.message?.content ?? 'AI summary unavailable'
-
       reportSummary = {
-        executiveSummary: summaryText,
+        executiveSummary: summaryText || 'AI summary unavailable',
         generatedAt: new Date().toISOString(),
       }
     } catch (llmError) {
@@ -433,3 +428,4 @@ ${JSON.stringify(computedMetrics, null, 2)}`
     )
   }
 }
+

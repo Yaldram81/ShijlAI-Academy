@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-outcomes - Generate learning outcomes
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { topic, framework, level, count } = body
+    const { topic, framework, level, count, moduleId, courseId } = body
 
     if (!topic) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 })
@@ -15,11 +15,9 @@ export async function POST(request: NextRequest) {
     const resolvedLevel = level || 'intermediate'
     const resolvedCount = Math.min(Math.max(Number(count) || 8, 3), 15)
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert instructional designer specializing in writing measurable learning outcomes. You create outcomes aligned with ${resolvedFramework}.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text.
+IMPORTANT: You MUST respond with valid JSON only.
 The JSON must follow this exact structure:
 {
   "outcomes": [
@@ -47,39 +45,35 @@ Topic: ${topic}
 Framework: ${resolvedFramework}
 Level: ${resolvedLevel}
 
-Create outcomes that progress from lower-order to higher-order thinking skills.
-Respond with JSON only:`
+Create outcomes that progress from lower-order to higher-order thinking skills.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
+    let result: any = null
+    try {
+      result = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'outcomes_generator',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate outcomes JSON:', err)
+    }
 
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
+    if (!result || !result.outcomes || !Array.isArray(result.outcomes)) {
       return NextResponse.json({ error: 'AI failed to generate outcomes. Please try again.' }, { status: 422 })
     }
 
-    try {
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-      const parsed = JSON.parse(cleaned)
-      if (parsed.outcomes && Array.isArray(parsed.outcomes)) {
-        return NextResponse.json({ outcomes: parsed.outcomes, summary: parsed.summary, alignment: parsed.alignment, content: response })
-      }
-    } catch {
-      // fall through
-    }
-
-    return NextResponse.json({ content: response })
+    return NextResponse.json({
+      outcomes: result.outcomes,
+      summary: result.summary,
+      alignment: result.alignment,
+      content: JSON.stringify(result)
+    })
   } catch (error) {
     console.error('Error generating outcomes:', error)
     return NextResponse.json({ error: 'Failed to generate outcomes' }, { status: 500 })
   }
 }
+

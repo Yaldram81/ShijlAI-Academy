@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-quiz - Generate quiz questions using AI
 export async function POST(request: NextRequest) {
@@ -14,8 +14,6 @@ export async function POST(request: NextRequest) {
     const questionCount = Math.min(Math.max(count || 5, 1), 20)
     const difficultyLevel = difficulty || 'medium'
     const types = questionTypes || ['mcq', 'true_false', 'fill_blank']
-
-    const sdk = await ZAI.create()
 
     const prompt = `Generate ${questionCount} quiz questions about "${topic}" at ${difficultyLevel} difficulty level.
 
@@ -50,31 +48,18 @@ Rules:
 
 Generate the questions now:`
 
-    const response = await sdk.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'default',
-    })
-
-    // Parse the AI response to extract questions
-    const content = response.choices?.[0]?.message?.content || ''
-    
-    // Try to extract JSON from the response
     let questions = []
     try {
-      // First try direct parse
-      questions = JSON.parse(content)
-    } catch {
-      // Try to extract JSON from markdown code block
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-      if (jsonMatch) {
-        questions = JSON.parse(jsonMatch[1])
-      } else {
-        // Try to find array in the response
-        const arrayMatch = content.match(/\[[\s\S]*\]/)
-        if (arrayMatch) {
-          questions = JSON.parse(arrayMatch[0])
-        }
-      }
+      questions = await AIService.generateJSON<any[]>({
+        systemPrompt: 'You are an educational quiz generator. Return only valid JSON arrays containing the quiz questions.',
+        messages: [{ role: 'user', content: prompt }],
+        complexity: 'fast',
+        feature: 'quiz_generator',
+        userId: moduleId || courseId, // use whatever context ID is available
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate quiz questions JSON:', err)
     }
 
     if (!Array.isArray(questions)) {

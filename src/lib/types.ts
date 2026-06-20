@@ -26,6 +26,7 @@ export type View =
   | 'register'
   | 'forgot-password'
   | 'verify-otp'
+  | 'reset-password'
   // App views (authenticated)
   | 'dashboard'
   | 'courses'

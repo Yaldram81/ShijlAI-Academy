@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { sendEmail, passwordChangedEmail } from '@/lib/email'
 
+// TODO(security): Replace simpleHash with bcrypt or argon2 in production.
+// This is a weak hash only suitable for demonstration purposes.
 function simpleHash(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -23,14 +26,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (newPassword.length < 6) {
+    // Enforce minimum password length (8 chars per security guidelines)
+    if (newPassword.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Password must be at least 8 characters long' },
         { status: 400 }
       )
     }
 
-    // Find user with matching reset token that hasn't expired
+    // Find user with matching, non-expired reset token
     const user = await db.user.findFirst({
       where: {
         resetToken: token,
@@ -40,12 +44,12 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { error: 'Invalid or expired reset token. Please request a new password reset link.' },
         { status: 401 }
       )
     }
 
-    // Update password and clear reset token
+    // Update password and clear the reset token
     await db.user.update({
       where: { id: user.id },
       data: {
@@ -57,11 +61,16 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Send password-changed confirmation email (fire-and-forget)
+    sendEmail(passwordChangedEmail({ fullName: user.name, email: user.email })).catch((err) => {
+      console.error('[reset-password] Failed to send confirmation email:', err instanceof Error ? err.message : 'Unknown')
+    })
+
     return NextResponse.json({
-      message: 'Password reset successfully',
+      message: 'Password reset successfully. You can now log in with your new password.',
     })
   } catch (error) {
-    console.error('Reset password error:', error)
+    console.error('[reset-password] Error:', error instanceof Error ? error.message : 'Unknown')
     return NextResponse.json(
       { error: 'Password reset failed' },
       { status: 500 }

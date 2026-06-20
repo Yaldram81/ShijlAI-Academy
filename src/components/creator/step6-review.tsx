@@ -8,6 +8,7 @@ import {
   DollarSign, Search, Award, Shield, Users, Globe,
   Video, FileText, Calendar, Eye, ArrowRight, Info,
   AlertCircle, Play, Timer, GraduationCap, Tag, Lock,
+  Send, Save, CalendarClock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -145,6 +146,117 @@ function HealthCheckRow({
   )
 }
 
+// ─── Confirmation Dialog ───
+
+function ConfirmSubmitDialog({
+  open,
+  onClose,
+  onConfirm,
+  publishOption,
+  scheduledDate,
+  scheduledTime,
+  courseName,
+}: {
+  open: boolean
+  onClose: () => void
+  onConfirm: () => void
+  publishOption: string
+  scheduledDate: string
+  scheduledTime: string
+  courseName: string
+}) {
+  if (!open) return null
+
+  const isDraft = publishOption === 'draft'
+  const isScheduled = publishOption === 'scheduled'
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={SPRING}
+            className="w-full max-w-md rounded-2xl bg-card border border-border ios-shadow-lg p-6 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="flex justify-center">
+              <div className={cn(
+                'flex size-16 items-center justify-center rounded-2xl',
+                isDraft
+                  ? 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400'
+                  : isScheduled
+                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'
+                  : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+              )}>
+                {isDraft ? <Save className="size-7" /> : isScheduled ? <CalendarClock className="size-7" /> : <Send className="size-7" />}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="text-center space-y-1.5">
+              <h3 className="text-[18px] font-bold">
+                {isDraft ? 'Save as Draft?' : isScheduled ? 'Submit & Schedule?' : 'Submit for Review?'}
+              </h3>
+              <p className="text-[13px] text-muted-foreground leading-relaxed">
+                {isDraft ? (
+                  <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be saved as a draft. You can continue editing and submit for review later.</>
+                ) : isScheduled ? (
+                  <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be submitted to an admin for review. Once approved, it will go live on <span className="font-semibold text-foreground">{scheduledDate}</span> at <span className="font-semibold text-foreground">{scheduledTime || '12:00'}</span>.</>
+                ) : (
+                  <>Your course <span className="font-semibold text-foreground">&quot;{courseName}&quot;</span> will be submitted to an admin for review. Once approved, it will go live immediately.</>
+                )}
+              </p>
+            </div>
+
+            {/* Info Banner */}
+            {!isDraft && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 p-3 flex items-start gap-2.5">
+                <Shield className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                  Admin review typically takes 24–48 hours. You&apos;ll receive a notification once your course is approved or if changes are requested.
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl h-11 text-[13px] font-semibold ios-press"
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+              <Button
+                className={cn(
+                  'flex-1 rounded-xl h-11 text-[13px] font-semibold ios-press gap-2',
+                  isDraft
+                    ? 'bg-slate-700 hover:bg-slate-800 text-white dark:bg-slate-600 dark:hover:bg-slate-700'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white'
+                )}
+                onClick={onConfirm}
+              >
+                {isDraft ? <Save className="size-4" /> : <Send className="size-4" />}
+                {isDraft ? 'Save Draft' : 'Confirm & Submit'}
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 // ─── Main Component ───
 
 export function Step6Review({
@@ -155,6 +267,7 @@ export function Step6Review({
   onPreview,
 }: Step6ReviewProps) {
   const [aiQualityLoading, setAiQualityLoading] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   // ─── Compute Course Stats ───
 
@@ -276,6 +389,31 @@ export function Step6Review({
     toast.info(`Navigate to ${action} to fix this item`)
   }
 
+  // ─── Submit Handler ───
+
+  const handleSubmitClick = () => {
+    setShowConfirm(true)
+  }
+
+  const handleConfirmSubmit = () => {
+    setShowConfirm(false)
+    onSubmit()
+  }
+
+  // ─── Submit Button Label ───
+
+  const submitButtonLabel = useMemo(() => {
+    if (form.publishOption === 'draft') return 'Save as Draft'
+    if (form.publishOption === 'scheduled') return 'Submit & Schedule'
+    return 'Submit for Admin Review'
+  }, [form.publishOption])
+
+  const submitButtonIcon = useMemo(() => {
+    if (form.publishOption === 'draft') return <Save className="size-4" />
+    if (form.publishOption === 'scheduled') return <CalendarClock className="size-4" />
+    return <Send className="size-4" />
+  }, [form.publishOption])
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -293,7 +431,7 @@ export function Step6Review({
                 Course Health Score
               </h3>
               <p className="text-[12px] text-muted-foreground mt-0.5">
-                Review your course readiness before publishing
+                Review your course readiness before submitting
               </p>
             </div>
             <Button
@@ -397,139 +535,245 @@ export function Step6Review({
 
         <Separator />
 
-        {/* ─── Publish Options ─── */}
-        <div className="space-y-3">
-          <h3 className="text-[16px] font-bold flex items-center gap-2">
-            <Rocket className="size-5 text-primary" />
-            Publish Options
-          </h3>
+        {/* ─── Submission Options ─── */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-[16px] font-bold flex items-center gap-2">
+              <Rocket className="size-5 text-primary" />
+              Submission Options
+            </h3>
+            <p className="text-[12px] text-muted-foreground mt-1">
+              Choose how you want to proceed with your course
+            </p>
+          </div>
 
           <RadioGroup
             value={form.publishOption}
             onValueChange={(v) => onFormChange({ publishOption: v as 'immediate' | 'scheduled' | 'draft' })}
-            className="space-y-3"
+            className="space-y-4"
           >
-            {/* Publish Immediately */}
+            {/* ─── Option 1: Submit for Admin Review ─── */}
             <motion.div
-              whileTap={{ scale: 0.995 }}
+              whileTap={{ scale: 0.998 }}
               className={cn(
-                'flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all',
+                'rounded-2xl border-2 p-5 cursor-pointer transition-all',
                 form.publishOption === 'immediate'
-                  ? 'border-primary/30 bg-primary/5 ios-shadow'
-                  : 'border-border hover:border-primary/20 ios-shadow-sm'
+                  ? 'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 ios-shadow'
+                  : 'border-border hover:border-emerald-300/50 ios-shadow-sm'
               )}
               onClick={() => onFormChange({ publishOption: 'immediate' })}
             >
-              <RadioGroupItem value="immediate" id="immediate" className="mt-0.5" />
-              <Label htmlFor="immediate" className="cursor-pointer flex-1">
-                <div className="flex items-center gap-2">
-                  <Rocket className={cn('size-4', form.publishOption === 'immediate' ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className="text-[14px] font-semibold">Publish Immediately</span>
+              <div className="flex items-start gap-4">
+                <RadioGroupItem value="immediate" id="immediate" className="mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'flex size-10 items-center justify-center rounded-xl shrink-0',
+                      form.publishOption === 'immediate'
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Send className="size-5" />
+                    </div>
+                    <Label htmlFor="immediate" className="cursor-pointer">
+                      <span className="text-[15px] font-bold block">Submit for Admin Review</span>
+                      <span className="text-[12px] text-muted-foreground block mt-0.5">
+                        Your course will be reviewed and goes live once approved
+                      </span>
+                    </Label>
+                  </div>
+
+                  <AnimatePresence>
+                    {form.publishOption === 'immediate' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={SPRING}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 ml-[52px] rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/30 p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3.5 shrink-0" />
+                            <span>Course submitted to admin for quality review</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3.5 shrink-0" />
+                            <span>You&apos;ll be notified when approved or if changes needed</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[12px] text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3.5 shrink-0" />
+                            <span>Course goes live immediately after approval</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <p className="text-[12px] text-muted-foreground mt-1">
-                  Your course goes live as soon as it's approved
-                </p>
-              </Label>
+              </div>
             </motion.div>
 
-            {/* Schedule Publish */}
+            {/* ─── Option 2: Schedule Publication ─── */}
             <motion.div
-              whileTap={{ scale: 0.995 }}
+              whileTap={{ scale: 0.998 }}
               className={cn(
-                'rounded-2xl border p-4 cursor-pointer transition-all',
+                'rounded-2xl border-2 p-5 cursor-pointer transition-all',
                 form.publishOption === 'scheduled'
-                  ? 'border-primary/30 bg-primary/5 ios-shadow'
-                  : 'border-border hover:border-primary/20 ios-shadow-sm'
+                  ? 'border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20 ios-shadow'
+                  : 'border-border hover:border-blue-300/50 ios-shadow-sm'
               )}
               onClick={() => onFormChange({ publishOption: 'scheduled' })}
             >
-              <div className="flex items-start gap-3">
-                <RadioGroupItem value="scheduled" id="scheduled" className="mt-0.5" />
-                <Label htmlFor="scheduled" className="cursor-pointer flex-1">
-                  <div className="flex items-center gap-2">
-                    <Calendar className={cn('size-4', form.publishOption === 'scheduled' ? 'text-primary' : 'text-muted-foreground')} />
-                    <span className="text-[14px] font-semibold">Schedule Publish</span>
-                  </div>
-                  <p className="text-[12px] text-muted-foreground mt-1">
-                    Set a specific date and time to go live
-                  </p>
-                </Label>
-              </div>
-              <AnimatePresence>
-                {form.publishOption === 'scheduled' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={SPRING}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex items-center gap-3 mt-3 ml-7">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] font-medium">Date</Label>
-                        <Input
-                          type="date"
-                          value={form.scheduledDate}
-                          onChange={(e) => onFormChange({ scheduledDate: e.target.value })}
-                          className="h-9 rounded-xl text-[13px]"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] font-medium">Time</Label>
-                        <Input
-                          type="time"
-                          value={form.scheduledTime}
-                          onChange={(e) => onFormChange({ scheduledTime: e.target.value })}
-                          className="h-9 rounded-xl text-[13px]"
-                        />
-                      </div>
+              <div className="flex items-start gap-4">
+                <RadioGroupItem value="scheduled" id="scheduled" className="mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'flex size-10 items-center justify-center rounded-xl shrink-0',
+                      form.publishOption === 'scheduled'
+                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      <CalendarClock className="size-5" />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <Label htmlFor="scheduled" className="cursor-pointer">
+                      <span className="text-[15px] font-bold block">Schedule Publication</span>
+                      <span className="text-[12px] text-muted-foreground block mt-0.5">
+                        Submit for review now, go live at a specific date after approval
+                      </span>
+                    </Label>
+                  </div>
+
+                  <AnimatePresence>
+                    {form.publishOption === 'scheduled' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={SPRING}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 ml-[52px] space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="space-y-1.5 flex-1">
+                              <Label className="text-[12px] font-semibold">Go-Live Date</Label>
+                              <Input
+                                type="date"
+                                value={form.scheduledDate}
+                                onChange={(e) => onFormChange({ scheduledDate: e.target.value })}
+                                className="h-10 rounded-xl text-[13px]"
+                              />
+                            </div>
+                            <div className="space-y-1.5 flex-1">
+                              <Label className="text-[12px] font-semibold">Go-Live Time</Label>
+                              <Input
+                                type="time"
+                                value={form.scheduledTime}
+                                onChange={(e) => onFormChange({ scheduledTime: e.target.value })}
+                                className="h-10 rounded-xl text-[13px]"
+                              />
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/30 p-3">
+                            <p className="text-[12px] text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                              <Info className="size-3.5 shrink-0 mt-0.5" />
+                              Your course will be submitted for review now. After admin approval, it will automatically go live at the scheduled date and time.
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
             </motion.div>
 
-            {/* Save as Draft */}
+            {/* ─── Option 3: Save as Draft ─── */}
             <motion.div
-              whileTap={{ scale: 0.995 }}
+              whileTap={{ scale: 0.998 }}
               className={cn(
-                'flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all',
+                'rounded-2xl border-2 p-5 cursor-pointer transition-all',
                 form.publishOption === 'draft'
-                  ? 'border-primary/30 bg-primary/5 ios-shadow'
-                  : 'border-border hover:border-primary/20 ios-shadow-sm'
+                  ? 'border-slate-400/50 bg-slate-50/50 dark:bg-slate-900/30 ios-shadow'
+                  : 'border-border hover:border-slate-300/50 ios-shadow-sm'
               )}
               onClick={() => onFormChange({ publishOption: 'draft' })}
             >
-              <RadioGroupItem value="draft" id="draft" className="mt-0.5" />
-              <Label htmlFor="draft" className="cursor-pointer flex-1">
-                <div className="flex items-center gap-2">
-                  <FileText className={cn('size-4', form.publishOption === 'draft' ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className="text-[14px] font-semibold">Save as Draft</span>
+              <div className="flex items-start gap-4">
+                <RadioGroupItem value="draft" id="draft" className="mt-1 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'flex size-10 items-center justify-center rounded-xl shrink-0',
+                      form.publishOption === 'draft'
+                        ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Save className="size-5" />
+                    </div>
+                    <Label htmlFor="draft" className="cursor-pointer">
+                      <span className="text-[15px] font-bold block">Save as Draft</span>
+                      <span className="text-[12px] text-muted-foreground block mt-0.5">
+                        Continue working later — only you can see draft courses
+                      </span>
+                    </Label>
+                  </div>
+
+                  <AnimatePresence>
+                    {form.publishOption === 'draft' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={SPRING}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 ml-[52px] rounded-xl bg-slate-100 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/40 p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-400">
+                            <Info className="size-3.5 shrink-0" />
+                            <span>Draft is auto-saved every 30 seconds</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-400">
+                            <Info className="size-3.5 shrink-0" />
+                            <span>Not visible to students or admins</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-400">
+                            <Info className="size-3.5 shrink-0" />
+                            <span>Submit for review when you&apos;re ready</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <p className="text-[12px] text-muted-foreground mt-1">
-                  Save your progress and publish later
-                </p>
-              </Label>
+              </div>
             </motion.div>
           </RadioGroup>
         </div>
 
         {/* ─── Admin Review Notice ─── */}
-        <div className="rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 shrink-0">
-              <Shield className="size-4" />
+        {form.publishOption !== 'draft' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={SPRING}
+            className="rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 shrink-0">
+                <Shield className="size-4" />
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">
+                  Admin Review Required
+                </p>
+                <p className="text-[12px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
+                  All courses go through an admin review before becoming visible to students. This ensures quality standards are met. Review typically takes 24–48 hours.
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">
-                Admin Review Required
-              </p>
-              <p className="text-[12px] text-amber-600/80 dark:text-amber-400/70 mt-0.5">
-                Your course will be reviewed within 24-48 hours after submission. Once approved, it will appear in the course catalog based on your publish settings.
-              </p>
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        )}
 
         {/* ─── Action Buttons ─── */}
         <div className="space-y-3">
@@ -545,11 +789,16 @@ export function Step6Review({
             </Button>
             <Button
               type="button"
-              className="rounded-2xl h-12 ios-press gap-2 text-[14px] font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-              onClick={onSubmit}
+              className={cn(
+                'rounded-2xl h-12 ios-press gap-2 text-[14px] font-semibold',
+                form.publishOption === 'draft'
+                  ? 'bg-slate-700 hover:bg-slate-800 text-white dark:bg-slate-600 dark:hover:bg-slate-700'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white'
+              )}
+              onClick={handleSubmitClick}
             >
-              <Rocket className="size-4" />
-              Submit for Review & Publish
+              {submitButtonIcon}
+              {submitButtonLabel}
             </Button>
           </div>
 
@@ -574,6 +823,17 @@ export function Step6Review({
           <div />
         </div>
       </motion.div>
+
+      {/* ─── Confirmation Dialog ─── */}
+      <ConfirmSubmitDialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        publishOption={form.publishOption}
+        scheduledDate={form.scheduledDate}
+        scheduledTime={form.scheduledTime}
+        courseName={form.title || 'Untitled Course'}
+      />
     </div>
   )
 }

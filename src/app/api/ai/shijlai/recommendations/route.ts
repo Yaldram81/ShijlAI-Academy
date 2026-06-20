@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { generateRecommendations } from '@/services/learning-engine'
+import { AIService } from '@/services/ai'
 
 // GET /api/ai/shijlai/recommendations?userId=xxx&type=xxx&status=xxx
 export async function GET(request: NextRequest) {
@@ -47,9 +48,6 @@ export async function POST(request: NextRequest) {
     // If we also have a source event, try LLM enhancement for additional context
     if (sourceEvent) {
       try {
-        const ZAI = (await import('z-ai-web-dev-sdk')).default
-        const zai = await ZAI.create()
-
         // Get student profile for LLM context
         const profile = await db.studentLearningProfile.findUnique({
           where: { studentId: userId },
@@ -77,31 +75,22 @@ export async function POST(request: NextRequest) {
           sourceData,
         }
 
-        const completion = await zai.chat.completions.create({
-          messages: [
-            {
-              role: 'assistant',
-              content: `You are an AI learning recommendation engine for ShijlAI Academy. Based on the student's profile and topic mastery data, generate 2-3 additional personalized learning recommendations. Each recommendation should have: type (lesson, quiz, course, topic, or study_plan), title, description, reason (why this is recommended), priority (low, medium, high), priorityScore (0-100). Return as a JSON array.`,
-            },
-            {
-              role: 'user',
-              content: `Student data: ${JSON.stringify(studentContext)}`,
-            },
-          ],
-          thinking: { type: 'disabled' },
-        })
-
-        const responseText = completion.choices[0]?.message?.content || '[]'
-
-        // Parse the LLM response
         let llmRecommendations: Array<Record<string, unknown>> = []
         try {
-          const jsonMatch = responseText.match(/\[[\s\S]*\]/)
-          if (jsonMatch) {
-            llmRecommendations = JSON.parse(jsonMatch[0])
-          }
-        } catch {
-          console.error('Failed to parse LLM recommendations JSON')
+          llmRecommendations = await AIService.generateJSON<Array<Record<string, unknown>>>({
+            systemPrompt: `You are an AI learning recommendation engine for ShijlAI Academy. Based on the student's profile and topic mastery data, generate 2-3 additional personalized learning recommendations. Each recommendation should have: type (lesson, quiz, course, topic, or study_plan), title, description, reason (why this is recommended), priority (low, medium, high), priorityScore (0-100). Return as a JSON array.`,
+            messages: [
+              {
+                role: 'user',
+                content: `Student data: ${JSON.stringify(studentContext)}`,
+              },
+            ],
+            complexity: 'fast',
+            feature: 'recommendation_engine',
+            userId,
+          })
+        } catch (err) {
+          console.error('Failed to generate LLM recommendations JSON:', err)
         }
 
         // Save LLM recommendations

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/assessment/generate-insights
 export async function POST(request: Request) {
@@ -113,11 +113,9 @@ export async function POST(request: Request) {
       },
     }, null, 2)
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert assessment analyst and educational consultant. Analyze assessment data and provide actionable insights for both students and instructors.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text.
+IMPORTANT: You MUST respond with valid JSON only.
 The JSON must follow this exact structure:
 {
   "studentInsights": [
@@ -160,49 +158,36 @@ Generate specific, actionable insights for both students and instructors. Consid
 - Questions that are too difficult or too easy may indicate content misalignment
 - Weak distractors (low selection rate) suggest poorly designed wrong answers
 - Low outcome coverage means some learning objectives aren't being assessed
-- Difficulty imbalance means the assessment may not accurately measure student knowledge
+- Difficulty imbalance means the assessment may not accurately measure student knowledge`
 
-Respond with JSON only:`
-
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
-      return NextResponse.json({ error: 'AI failed to generate insights. Please try again.' }, { status: 422 })
-    }
-
-    // Try to parse as JSON
+    let parsed: any = null
     try {
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-      const parsed = JSON.parse(cleaned)
-
-      if (parsed.studentInsights && parsed.instructorInsights) {
-        return NextResponse.json({
-          studentInsights: parsed.studentInsights,
-          instructorInsights: parsed.instructorInsights,
-          overallAssessment: parsed.overallAssessment || {
-            healthScore: 50,
-            strengths: [],
-            areasForImprovement: [],
-            priorityActions: [],
-          },
-        })
-      }
-    } catch {
-      // JSON parsing failed, return raw content
+      parsed = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'assessment_insights',
+        userId: instructorId,
+        courseId,
+      })
+    } catch (err) {
+      console.error('Failed to generate assessment insights JSON:', err)
     }
 
-    // Fallback: return raw content
+    if (parsed && parsed.studentInsights && parsed.instructorInsights) {
+      return NextResponse.json({
+        studentInsights: parsed.studentInsights,
+        instructorInsights: parsed.instructorInsights,
+        overallAssessment: parsed.overallAssessment || {
+          healthScore: 50,
+          strengths: [],
+          areasForImprovement: [],
+          priorityActions: [],
+        },
+      })
+    }
+
+    // Fallback: return empty/default structured response
     return NextResponse.json({
       studentInsights: [],
       instructorInsights: [],
@@ -212,10 +197,10 @@ Respond with JSON only:`
         areasForImprovement: [],
         priorityActions: [],
       },
-      rawContent: response,
     })
   } catch (error) {
     console.error('Error generating assessment insights:', error)
     return NextResponse.json({ error: 'Failed to generate assessment insights' }, { status: 500 })
   }
 }
+

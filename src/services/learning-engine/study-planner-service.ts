@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { getOrCreateProfile } from './profile-service'
 import { getWeakTopics, getStrongTopics } from './mastery-service'
+import { AIService } from '@/services/ai'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -50,11 +51,8 @@ async function generateAIPlanEnhancement(context: {
   currentGrade?: string
   learningLevel?: string
   learningSpeed?: string
-}): Promise<{ tips?: string[]; focusAreas?: string[]; scheduleNotes?: string } | null> {
+}, userId?: string): Promise<{ tips?: string[]; focusAreas?: string[]; scheduleNotes?: string } | null> {
   try {
-    const { z } = await require('z-ai-web-dev-sdk') as any
-    const zai = await z.ai.create()
-
     const prompt = `You are a study plan advisor. Given this student context, provide brief JSON advice:
 - course: ${context.courseName || 'General'}
 - exam date: ${context.examDate}
@@ -75,21 +73,20 @@ Return ONLY a JSON object with:
   "scheduleNotes": "brief note about schedule optimization"
 }`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: 'You are a study plan advisor. Return only valid JSON.' },
-        { role: 'user', content: prompt },
-      ],
-      thinking: { type: 'disabled' },
+    const parsed = await AIService.generateJSON<any>({
+      systemPrompt: 'You are a study plan advisor. Return only valid JSON.',
+      messages: [{ role: 'user', content: prompt }],
+      complexity: 'fast',
+      feature: 'study_planner',
+      userId,
     })
 
-    const text = completion.choices?.[0]?.message?.content || ''
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+    if (parsed && Array.isArray(parsed.tips)) {
+      return parsed
     }
     return null
-  } catch {
+  } catch (err) {
+    console.error('generateAIPlanEnhancement error:', err)
     return null
   }
 }
@@ -413,7 +410,7 @@ export async function generateStudyPlan(params: GenerateStudyPlanParams) {
     currentGrade,
     learningLevel: profile?.learningLevel || undefined,
     learningSpeed: profile?.learningSpeed || undefined,
-  })
+  }, userId)
 
   // Build planData JSON with AI tips if available
   const planDataObj: Record<string, unknown> = {
@@ -624,3 +621,4 @@ export async function deleteStudyPlan(planId: string, userId: string) {
 
   return updated
 }
+

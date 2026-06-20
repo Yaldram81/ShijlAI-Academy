@@ -212,6 +212,7 @@ export function CourseCreatorView() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            instructorId: currentUser.id,
             title: form.title || 'Untitled Course',
             description: form.description,
             category: form.category || 'Other',
@@ -461,13 +462,54 @@ export function CourseCreatorView() {
 
     try {
       await syncCourseContent(courseId)
+
+      // Build submission payload based on publish option
+      const submitPayload: Record<string, unknown> = {
+        instructorId: currentUser.id,
+        title: form.title || 'Untitled Course',
+        description: form.description,
+        category: form.category || 'Other',
+        level: form.difficultyLevel,
+        language: form.language,
+        thumbnail: form.thumbnail || null,
+        price: form.priceUSD,
+        certificateEnabled: form.certificateEnabled,
+        completionThreshold: form.completionThreshold,
+        estimatedDuration: form.modules.reduce(
+          (acc, m) => acc + m.lessons.reduce((a, l) => a + l.duration, 0), 0
+        ),
+        learningObjectives: JSON.stringify(form.whatYouLearn),
+        prerequisites: JSON.stringify(form.requirements),
+        targetAudience: form.targetAudience.join(', '),
+        tags: JSON.stringify(form.searchTags),
+      }
+
+      if (form.publishOption === 'draft') {
+        // Just save as draft — don't submit for review
+        submitPayload.reviewStatus = 'draft'
+      } else {
+        // Submit for review (immediate or scheduled)
+        submitPayload.reviewStatus = 'pending'
+        submitPayload.submittedForReviewAt = new Date().toISOString()
+      }
+
       const res = await fetch(`/api/instructor/courses/${courseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reviewStatus: 'pending', submittedForReviewAt: new Date().toISOString() }),
+        body: JSON.stringify(submitPayload),
       })
       if (res.ok) {
-        toast.success('Course submitted for review! 🎉')
+        if (form.publishOption === 'draft') {
+          toast.success('Course saved as draft! ✓')
+        } else if (form.publishOption === 'scheduled') {
+          toast.success('Course submitted for review & scheduled! 📅', {
+            description: `Will go live on ${form.scheduledDate} at ${form.scheduledTime || '12:00'} after admin approval.`,
+          })
+        } else {
+          toast.success('Course submitted for admin review! 🎉', {
+            description: 'You\'ll be notified once an admin reviews and approves your course.',
+          })
+        }
         setEditingCourseId(null)
         setCurrentView('instructor-courses')
       } else {
@@ -779,7 +821,7 @@ export function CourseCreatorView() {
         </div>
 
         {/* Step Navigation Bar - Prominent Numbered Circles */}
-        <div className="px-4 py-3">
+        <div className="px-4 py-2">
           <div className="flex items-center w-full">
             {STEPS.map((step, idx) => {
               const status = getStepStatus(step.id)
@@ -794,7 +836,7 @@ export function CourseCreatorView() {
                   >
                     <motion.div
                       className={cn(
-                        'flex size-10 items-center justify-center rounded-full text-[14px] font-bold transition-all border-2',
+                        'flex size-8 items-center justify-center rounded-full text-[13px] font-bold transition-all border-2',
                         isActive
                           ? 'bg-primary text-primary-foreground border-primary ios-shadow-lg scale-110'
                           : status === 'complete'
@@ -806,9 +848,9 @@ export function CourseCreatorView() {
                       whileTap={{ scale: 0.95 }}
                     >
                       {status === 'complete' && !isActive ? (
-                        <Check className="size-5" />
+                        <Check className="size-4" />
                       ) : (
-                        step.id + 1
+                        idx + 1
                       )}
                     </motion.div>
                     <span className={cn(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // GET /api/ai/shijlai/study-plan?userId=xxx&status=xxx
 export async function GET(request: NextRequest) {
@@ -62,38 +62,29 @@ export async function POST(request: NextRequest) {
 
     const subjectsStr = Array.isArray(subjects) ? subjects.join(', ') : subjects
 
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: `You are a study plan generator for ShijlAI Academy. Create a personalized daily study schedule in JSON format. The plan should have a "days" array where each day has: "day" (number), "subjects" (array of { "name": string, "topics": string[], "duration": number in minutes, "activities": string[] }), "totalMinutes": number, "notes": string. Also include "totalDays", "dailyHours", and "tips" (array of study tips strings).`,
-        },
-        {
-          role: 'user',
-          content: `Create a ${daysUntilExam}-day study plan for a student.
+    // Call AIService using generateJSON
+    let planData: Record<string, unknown> = {}
+    try {
+      planData = await AIService.generateJSON<Record<string, unknown>>({
+        systemPrompt: `You are a study plan generator for ShijlAI Academy. Create a personalized daily study schedule in JSON format. The plan should have a "days" array where each day has: "day" (number), "subjects" (array of { "name": string, "topics": string[], "duration": number in minutes, "activities": string[] }), "totalMinutes": number, "notes": string. Also include "totalDays", "dailyHours", and "tips" (array of study tips strings).`,
+        messages: [
+          {
+            role: 'user',
+            content: `Create a ${daysUntilExam}-day study plan for a student.
 Subjects: ${subjectsStr}
 Available hours per day: ${availableHoursPerDay}
 Exam date: ${examDate || 'Not specified'}
 Student context: ${JSON.stringify(studentContext)}
 
 Return only the JSON object.`,
-        },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const responseText = completion.choices[0]?.message?.content || '{}'
-
-    // Parse plan
-    let planData: Record<string, unknown> = {}
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        planData = JSON.parse(jsonMatch[0])
-      }
-    } catch {
-      console.error('Failed to parse study plan JSON')
+          },
+        ],
+        complexity: 'fast',
+        feature: 'study_planner',
+        userId,
+      })
+    } catch (err) {
+      console.error('Failed to generate study plan JSON:', err)
     }
 
     const title = `Study Plan: ${subjectsStr || 'General'} (${daysUntilExam} days)`

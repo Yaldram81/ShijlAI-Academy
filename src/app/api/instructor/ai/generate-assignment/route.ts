@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-assignment - Generate assignment brief with grading rubric using AI
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { skill, type, course } = body
+    const { skill, type, course, moduleId, courseId } = body
 
     if (!skill) {
       return NextResponse.json(
@@ -17,11 +17,9 @@ export async function POST(request: NextRequest) {
     const validTypes = ['written', 'coding', 'project', 'presentation', 'peer-review']
     const assignmentType = validTypes.includes(type) ? type : 'written'
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert assignment designer and curriculum developer with deep experience creating rigorous, well-structured academic assignments. You specialize in crafting clear assignment briefs that align learning objectives with measurable outcomes. You always include detailed grading rubrics with explicit criteria and point ranges to ensure transparent and consistent evaluation.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text. The JSON must follow this exact structure:
+IMPORTANT: You MUST respond with valid JSON only. The JSON must follow this exact structure:
 {
   "title": "Assignment Title",
   "objectives": ["Objective 1", "Objective 2"],
@@ -47,50 +45,33 @@ Provide 3-5 objectives, clear step-by-step instructions, a precise list of deliv
     const userPrompt = `Generate a comprehensive assignment brief for the following:
 
 - Skill/Topic: ${skill}
-- Assignment Type: ${assignmentType}${course ? `\n- Course: ${course}` : ''}
+- Assignment Type: ${assignmentType}${course ? `\n- Course: ${course}` : ''}`
 
-Respond with JSON only:`
+    let assignment: any = null
+    try {
+      assignment = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'assignment_generator',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate assignment JSON:', err)
+    }
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
+    if (!assignment || !assignment.title || !assignment.rubric || !Array.isArray(assignment.rubric)) {
       return NextResponse.json(
         { error: 'AI failed to generate assignment content. Please try again.' },
         { status: 422 }
       )
     }
 
-    // Try to parse the AI response as JSON
-    try {
-      // Strip markdown code fences if present
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-
-      const parsed = JSON.parse(cleaned)
-
-      // Validate structure
-      if (parsed.title && parsed.rubric && Array.isArray(parsed.rubric)) {
-        return NextResponse.json({
-          content: response,
-          assignment: parsed,
-        })
-      }
-    } catch {
-      // JSON parsing failed — return as plain text content
-    }
-
-    // Fallback: return raw content for the frontend to handle
-    return NextResponse.json({ content: response })
+    return NextResponse.json({
+      content: JSON.stringify(assignment),
+      assignment,
+    })
   } catch (error) {
     console.error('Error generating assignment:', error)
     return NextResponse.json(

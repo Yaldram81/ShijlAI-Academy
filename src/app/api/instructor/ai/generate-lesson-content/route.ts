@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-lesson-content - Generate detailed lesson content
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { topic, outline, style, audience } = body
+    const { topic, outline, style, audience, moduleId, courseId } = body
 
     if (!topic) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 })
@@ -14,11 +14,9 @@ export async function POST(request: NextRequest) {
     const resolvedStyle = style || 'Lecture Notes'
     const resolvedAudience = audience || 'Undergraduate'
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert educational content writer. Generate comprehensive lesson content based on the provided topic and optional outline.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text.
+IMPORTANT: You MUST respond with valid JSON only.
 The JSON must follow this exact structure:
 {
   "title": "Lesson Title",
@@ -58,39 +56,30 @@ Style: ${resolvedStyle}
 Audience: ${resolvedAudience}
 ${outline ? `Outline/Structure to follow:\n${outline}` : ''}
 
-Make the content engaging, pedagogically sound, and appropriate for the audience level.
-Respond with JSON only:`
+Make the content engaging, pedagogically sound, and appropriate for the audience level.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
+    let lesson: any = null
+    try {
+      lesson = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'lesson_content_generator',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate lesson content JSON:', err)
+    }
 
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
+    if (!lesson || !lesson.keyConcepts || !Array.isArray(lesson.keyConcepts)) {
       return NextResponse.json({ error: 'AI failed to generate lesson content. Please try again.' }, { status: 422 })
     }
 
-    try {
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-      const parsed = JSON.parse(cleaned)
-      if (parsed.keyConcepts && Array.isArray(parsed.keyConcepts)) {
-        return NextResponse.json({ lesson: parsed, content: response })
-      }
-    } catch {
-      // fall through
-    }
-
-    return NextResponse.json({ content: response })
+    return NextResponse.json({ lesson, content: JSON.stringify(lesson) })
   } catch (error) {
     console.error('Error generating lesson content:', error)
     return NextResponse.json({ error: 'Failed to generate lesson content' }, { status: 500 })
   }
 }
+

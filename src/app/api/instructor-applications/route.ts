@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { sendEmail, applicationConfirmationEmail, newApplicationAdminEmail } from '@/lib/email'
+import crypto from 'crypto'
 
-// Generate a unique application code
+// Generate a unique application code using CSPRNG
 function generateApplicationCode(): string {
   const year = new Date().getFullYear()
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+    code += chars.charAt(crypto.randomInt(0, chars.length))
   }
   return `INS-${year}-${code}`
 }

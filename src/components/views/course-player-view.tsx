@@ -58,8 +58,9 @@ import { Input } from '@/components/ui/input'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
+import ReactPlayer from 'react-player'
+import ReactMarkdown from 'react-markdown'
 import type { Course, Module, Lesson, LessonProgress, Enrollment } from '@/lib/types'
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 }
@@ -406,6 +407,7 @@ export function CoursePlayerView() {
   // ─── Refs ──────────────────────────────────────────────────────────────
   const playerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const reactPlayerRef = useRef<ReactPlayer>(null)
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -551,26 +553,28 @@ export function CoursePlayerView() {
 
   // ─── Video Element Sync ────────────────────────────────────────────────
   useEffect(() => {
+    // Legacy support for native video element if it exists
     const video = videoRef.current
-    if (!video) return
-    if (isPlaying) {
-      video.play().catch(() => setIsPlaying(false))
-    } else {
-      video.pause()
+    if (video) {
+      if (isPlaying) {
+        video.play().catch(() => setIsPlaying(false))
+      } else {
+        video.pause()
+      }
     }
   }, [isPlaying])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
-    video.playbackRate = playbackRate
+    if (video) video.playbackRate = playbackRate
   }, [playbackRate])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
-    video.volume = volume / 100
-    video.muted = isMuted
+    if (video) {
+      video.volume = volume / 100
+      video.muted = isMuted
+    }
   }, [volume, isMuted])
 
   // ─── Simulated Video Playback (fallback when no videoUrl) ──────────────
@@ -797,14 +801,16 @@ export function CoursePlayerView() {
     const pct = Math.max(0, Math.min(1, x / rect.width))
     const seekTime = pct * duration
     setCurrentTime(seekTime)
-    if (videoRef.current) videoRef.current.currentTime = seekTime
+    if (reactPlayerRef.current) reactPlayerRef.current.seekTo(seekTime, 'seconds')
+    else if (videoRef.current) videoRef.current.currentTime = seekTime
     resetControlsTimer()
   }
 
   const handleSkip = (seconds: number) => {
     setCurrentTime((prev) => {
       const next = Math.max(0, Math.min(duration, prev + seconds))
-      if (videoRef.current) videoRef.current.currentTime = next
+      if (reactPlayerRef.current) reactPlayerRef.current.seekTo(next, 'seconds')
+      else if (videoRef.current) videoRef.current.currentTime = next
       return next
     })
     resetControlsTimer()
@@ -1416,52 +1422,96 @@ export function CoursePlayerView() {
             onMouseMove={resetControlsTimer}
             onMouseLeave={() => isPlaying && setShowControls(false)}
           >
-            {/* Real video or simulated background */}
-            {currentLesson?.videoUrl ? (
-              <video
-                ref={videoRef}
-                src={currentLesson.videoUrl}
-                className="absolute inset-0 w-full h-full object-contain bg-black"
-                onClick={handlePlayPause}
-                onTimeUpdate={() => {
-                  if (videoRef.current) setCurrentTime(videoRef.current.currentTime)
-                }}
-                onLoadedMetadata={() => {
-                  if (videoRef.current) setDuration(videoRef.current.duration)
-                }}
-                onEnded={() => {
-                  setIsPlaying(false)
-                  if (enrollmentId && currentLesson) {
-                    fetch('/api/progress', {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        enrollmentId,
-                        lessonId: currentLesson.id,
-                        status: 'completed',
-                        timeSpent: Math.floor(duration / 60),
-                      }),
-                    }).then(() => {
-                      toast.success('Lesson completed! 🎉')
-                      fetchPlayerData()
-                    }).catch(() => {})
-                  }
-                }}
-              />
+            {/* Real video or document rendering */}
+            {(currentLesson?.type === 'video' || currentLesson?.videoUrl) ? (
+              <div className="absolute inset-0 w-full h-full bg-black">
+                <ReactPlayer
+                  ref={reactPlayerRef}
+                  url={currentLesson.videoUrl || ''}
+                  width="100%"
+                  height="100%"
+                  playing={isPlaying}
+                  playbackRate={playbackRate}
+                  volume={isMuted ? 0 : volume / 100}
+                  onProgress={(state) => {
+                    if (isPlaying) setCurrentTime(state.playedSeconds)
+                  }}
+                  onDuration={(dur) => setDuration(dur)}
+                  onEnded={() => {
+                    setIsPlaying(false)
+                    if (enrollmentId && currentLesson) {
+                      fetch('/api/progress', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          enrollmentId,
+                          lessonId: currentLesson.id,
+                          status: 'completed',
+                          timeSpent: Math.floor(duration / 60),
+                        }),
+                      }).then(() => {
+                        toast.success('Lesson completed! 🎉')
+                        fetchPlayerData()
+                      }).catch(() => {})
+                    }
+                  }}
+                  config={{
+                    file: { attributes: { controlsList: 'nodownload' } },
+                    youtube: { playerVars: { showinfo: 1 } },
+                  }}
+                  style={{ pointerEvents: 'none' }} // Ensure custom controls intercept clicks
+                />
+              </div>
+            ) : currentLesson?.type === 'text' ? (
+              <div className="absolute inset-0 bg-background overflow-y-auto p-8 lg:p-12 scrollbar-thin">
+                <div className="max-w-3xl mx-auto prose prose-emerald dark:prose-invert">
+                  <ReactMarkdown>{currentLesson.content || '*No content available for this lesson.*'}</ReactMarkdown>
+                </div>
+              </div>
+            ) : currentLesson?.type === 'quiz' || currentLesson?.type === 'assignment' ? (
+              <div className="absolute inset-0 bg-background overflow-y-auto p-8 flex flex-col items-center justify-center text-center">
+                 <div className="flex size-20 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
+                    {currentLesson.type === 'quiz' ? <FileQuestion className="size-10" /> : <ClipboardList className="size-10" />}
+                 </div>
+                 <h2 className="text-2xl font-bold mb-2">{currentLesson.title}</h2>
+                 <p className="text-muted-foreground mb-8 max-w-md">{currentLesson.description || 'Complete this activity to proceed to the next lesson.'}</p>
+                 <Button onClick={() => setShowFullContent(true)} className="rounded-full px-8 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg">
+                    Start {currentLesson.type === 'quiz' ? 'Quiz' : 'Assignment'}
+                 </Button>
+              </div>
+            ) : currentLesson?.type === 'interactive' && currentLesson?.slideUrl ? (
+              <iframe src={currentLesson.slideUrl} className="absolute inset-0 w-full h-full border-0 bg-background" allowFullScreen />
+            ) : currentLesson?.resources && Array.isArray(JSON.parse(currentLesson.resources || '[]')) && JSON.parse(currentLesson.resources || '[]').some((r: any) => r.type === 'pdf') ? (
+               <iframe src={JSON.parse(currentLesson.resources || '[]').find((r: any) => r.type === 'pdf')?.url} className="absolute inset-0 w-full h-full border-0 bg-background" />
+            ) : currentLesson?.resources && Array.isArray(JSON.parse(currentLesson.resources || '[]')) && JSON.parse(currentLesson.resources || '[]').some((r: any) => r.type === 'image') ? (
+               <div className="absolute inset-0 flex items-center justify-center bg-muted/30 p-8">
+                 <img src={JSON.parse(currentLesson.resources || '[]').find((r: any) => r.type === 'image')?.url} alt="Lesson Image" className="max-w-full max-h-full object-contain shadow-md rounded-lg" />
+               </div>
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center text-center p-8">
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   <div className="absolute top-1/3 -left-full w-[300%] h-px bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent animate-[shimmer_8s_ease-in-out_infinite]" />
                   <div className="absolute top-2/3 -left-full w-[300%] h-px bg-gradient-to-r from-transparent via-teal-500/10 to-transparent animate-[shimmer_12s_ease-in-out_infinite_2s]" />
                 </div>
+                <div className="relative z-10 flex flex-col items-center">
+                   <div className="flex size-16 mx-auto items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md shadow-2xl mb-4 border border-white/20">
+                     <Download className="size-8" />
+                   </div>
+                   <h3 className="text-white text-[22px] font-bold mb-2">Downloadable Lesson</h3>
+                   <p className="text-white/70 max-w-md mb-6 text-[14px]">This lesson contains files or resources that cannot be previewed natively in the browser. Please check the resources tab to download them.</p>
+                   <Button onClick={() => setActiveTab('resources')} variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white rounded-full px-6 active:scale-[0.97]">
+                     <FileText className="size-4 mr-2" />
+                     View Resources
+                   </Button>
+                </div>
               </div>
             )}
 
             {/* Center play icon when paused */}
-            {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center">
+            {(!isPlaying && (currentLesson?.type === 'video' || currentLesson?.videoUrl)) && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {!currentLesson?.videoUrl && (
                   <>
                     <div className="absolute size-24 rounded-full border-2 border-white/20 animate-ping" style={{ animationDuration: '2s' }} />
@@ -1482,8 +1532,8 @@ export function CoursePlayerView() {
             )}
 
             {/* Lesson info overlay */}
-            {showControls && (
-              <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-10">
+            {(showControls && (currentLesson?.type === 'video' || currentLesson?.videoUrl)) && (
+              <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-10 pointer-events-none">
                 <div className="flex items-center gap-2 rounded-lg bg-black/50 backdrop-blur-sm px-3 py-1.5">
                   <Video className="size-4 text-emerald-400" />
                   <span className="text-[12px] font-medium text-white">
@@ -1509,16 +1559,18 @@ export function CoursePlayerView() {
             )}
 
             {/* Always-visible thin progress bar at the very bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 z-10">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-300"
-                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-              />
-            </div>
+            {(currentLesson?.type === 'video' || currentLesson?.videoUrl) && (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 z-10 pointer-events-none">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-300"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
+            )}
 
             {/* ═══ VIDEO CONTROLS ═══ */}
             <AnimatePresence>
-              {showControls && (
+              {(showControls && (currentLesson?.type === 'video' || currentLesson?.videoUrl)) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

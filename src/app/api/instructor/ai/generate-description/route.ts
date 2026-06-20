@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-description - Generate SEO-optimized course descriptions using AI
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { topic, keywords, tone, title, category, level, language } = body
+    const { topic, keywords, tone, title, category, level, language, moduleId, courseId } = body
 
     // Support both `topic` (direct API call) and `title` (from course creator wizard)
     const resolvedTopic = topic || title
@@ -17,11 +17,9 @@ export async function POST(request: NextRequest) {
     const selectedTone: (typeof validTones)[number] =
       validTones.includes(tone) ? tone : 'professional'
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert SEO copywriter specializing in online course descriptions. Your goal is to create compelling, search-engine-optimized content that attracts learners and drives enrollments. You understand how to balance keyword optimization with engaging, persuasive writing.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text. The JSON must follow this exact structure:
+IMPORTANT: You MUST respond with valid JSON only. The JSON must follow this exact structure:
 {
   "seoTitle": "SEO-Optimized Title (under 60 chars)",
   "subtitle": "Compelling one-line subtitle (under 120 chars)",
@@ -44,50 +42,33 @@ ${category ? `Category: ${category}` : ''}
 ${level ? `Difficulty Level: ${level}` : ''}
 ${language ? `Language: ${language}` : ''}
 ${keywords ? `Target Keywords: ${keywords}` : 'Suggest relevant keywords based on the topic.'}
-Tone: ${selectedTone}
+Tone: ${selectedTone}`
 
-Respond with JSON only:`
+    let descriptionObj: any = null
+    try {
+      descriptionObj = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'description_generator',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate course description JSON:', err)
+    }
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
+    if (!descriptionObj || !descriptionObj.seoTitle || !descriptionObj.description) {
       return NextResponse.json(
         { error: 'AI failed to generate a description. Please try again.' },
         { status: 422 }
       )
     }
 
-    // Try to parse the AI response as JSON
-    try {
-      // Strip markdown code fences if present
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-
-      const parsed = JSON.parse(cleaned)
-
-      // Validate required fields exist
-      if (parsed.seoTitle && parsed.description) {
-        return NextResponse.json({
-          content: response,
-          description: parsed,
-        })
-      }
-    } catch {
-      // JSON parsing failed — return as plain text content
-    }
-
-    // Fallback: return raw content for the frontend to handle
-    return NextResponse.json({ content: response })
+    return NextResponse.json({
+      content: JSON.stringify(descriptionObj),
+      description: descriptionObj,
+    })
   } catch (error) {
     console.error('Error generating course description:', error)
     return NextResponse.json(
@@ -96,3 +77,4 @@ Respond with JSON only:`
     )
   }
 }
+

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { sendEmail, enrollmentConfirmationEmail } from '@/lib/email'
 
 // GET /api/enrollments - Get enrollments for a user
 export async function GET(request: NextRequest) {
@@ -74,6 +75,34 @@ export async function POST(req: NextRequest) {
     }).catch(() => {
       // Ignore if not in wishlist
     })
+
+    // Send enrollment confirmation email (fire-and-forget)
+    try {
+      const [enrolledUser, enrolledCourse] = await Promise.all([
+        db.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
+        db.course.findUnique({
+          where: { id: courseId },
+          select: {
+            title: true,
+            category: true,
+            instructor: { select: { name: true } },
+          },
+        }),
+      ])
+      if (enrolledUser && enrolledCourse) {
+        sendEmail(enrollmentConfirmationEmail({
+          fullName: enrolledUser.name,
+          email: enrolledUser.email,
+          courseTitle: enrolledCourse.title,
+          courseCategory: enrolledCourse.category,
+          instructorName: enrolledCourse.instructor?.name || 'ShijlAI Academy',
+        })).catch((err) => {
+          console.error('[enrollments] Failed to send confirmation email:', err instanceof Error ? err.message : 'Unknown')
+        })
+      }
+    } catch {
+      // Don't let email failure block enrollment response
+    }
 
     return NextResponse.json({ enrollment }, { status: 201 })
   } catch (error) {

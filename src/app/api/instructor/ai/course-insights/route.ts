@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/course-insights - Generate course improvement insights
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { courseName, focus, instructorId } = body
+    const { courseName, focus, instructorId, moduleId, courseId } = body
 
     // Fetch some analytics if instructorId is provided
     let analyticsContext = ''
@@ -23,11 +23,9 @@ export async function POST(request: NextRequest) {
 
     const resolvedFocus = focus || 'All Areas'
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert instructional coach and course improvement advisor. Analyze the course context and provide actionable improvement insights.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text.
+IMPORTANT: You MUST respond with valid JSON only.
 The JSON must follow this exact structure:
 {
   "insights": [
@@ -58,39 +56,37 @@ Focus Area: ${resolvedFocus}
 ${analyticsContext}
 
 Provide specific, actionable insights with clear recommendations.
-Prioritize by severity and include both quick wins and long-term goals.
-Respond with JSON only:`
+Prioritize by severity and include both quick wins and long-term goals.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
+    let parsed: any = null
+    try {
+      parsed = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'course_insights',
+        userId: instructorId || moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate course insights JSON:', err)
+    }
 
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
+    if (!parsed || !parsed.insights || !Array.isArray(parsed.insights)) {
       return NextResponse.json({ error: 'AI failed to generate insights. Please try again.' }, { status: 422 })
     }
 
-    try {
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-      const parsed = JSON.parse(cleaned)
-      if (parsed.insights && Array.isArray(parsed.insights)) {
-        return NextResponse.json({ insights: parsed.insights, overallScore: parsed.overallScore, overallRecommendation: parsed.overallRecommendation, quickWins: parsed.quickWins, longTermGoals: parsed.longTermGoals, content: response })
-      }
-    } catch {
-      // fall through
-    }
-
-    return NextResponse.json({ content: response })
+    return NextResponse.json({
+      insights: parsed.insights,
+      overallScore: parsed.overallScore,
+      overallRecommendation: parsed.overallRecommendation,
+      quickWins: parsed.quickWins,
+      longTermGoals: parsed.longTermGoals,
+      content: JSON.stringify(parsed)
+    })
   } catch (error) {
     console.error('Error generating course insights:', error)
     return NextResponse.json({ error: 'Failed to generate course insights' }, { status: 500 })
   }
 }
+

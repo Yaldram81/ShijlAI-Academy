@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 /* ═══════════════════════════════════════════════════════
    AI Mock Interview API — Comprehensive
@@ -326,27 +326,22 @@ Requirements:
 - Ideal answers should be concise (2-4 sentences)
 - Mix question types appropriately`
 
-    const zai = await ZAI.create()
-    const response = await zai.chat.completions.create({
-      model: 'default',
-      messages: [
-        { role: 'system', content: 'You are a precise JSON generator. Return only valid JSON arrays, no markdown, no explanation.' },
-        { role: 'user', content: prompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const content = response.choices?.[0]?.message?.content
-    if (!content) return null
-
-    // Parse JSON from response (handle potential markdown wrapping)
-    let jsonStr = content.trim()
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    let parsed: any[] | null = null
+    try {
+      parsed = await AIService.generateJSON<any[]>({
+        systemPrompt: 'You are a precise JSON generator. Return only valid JSON arrays, no markdown, no explanation.',
+        messages: [
+          { role: 'user', content: prompt },
+        ],
+        complexity: 'complex',
+        feature: 'mock_interview_question_gen',
+      })
+    } catch (err) {
+      console.error('[Mock Interview API] generateJSON failed:', err)
+      return null
     }
 
-    const parsed = JSON.parse(jsonStr)
-    if (!Array.isArray(parsed)) return null
+    if (!parsed || !Array.isArray(parsed)) return null
 
     return parsed.map(q => ({
       question: q.question || '',
@@ -394,25 +389,22 @@ Return ONLY valid JSON:
   "idealAnswer": "an improved version of the ideal answer incorporating what the student did well"
 }`
 
-    const zai = await ZAI.create()
-    const response = await zai.chat.completions.create({
-      model: 'default',
-      messages: [
-        { role: 'system', content: 'You are a precise JSON generator. Return only valid JSON objects, no markdown, no explanation.' },
-        { role: 'user', content: prompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const content = response.choices?.[0]?.message?.content
-    if (!content) return null
-
-    let jsonStr = content.trim()
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    let parsed: any = null
+    try {
+      parsed = await AIService.generateJSON<any>({
+        systemPrompt: 'You are a precise JSON generator. Return only valid JSON objects, no markdown, no explanation.',
+        messages: [
+          { role: 'user', content: prompt },
+        ],
+        complexity: 'complex',
+        feature: 'mock_interview_eval',
+      })
+    } catch (err) {
+      console.error('[Mock Interview API] evaluation generateJSON failed:', err)
+      return null
     }
 
-    const parsed = JSON.parse(jsonStr)
+    if (!parsed) return null
 
     const accuracy = clampScore(parsed.accuracy)
     const completeness = clampScore(parsed.completeness)

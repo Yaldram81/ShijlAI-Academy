@@ -845,6 +845,316 @@ function SkillDetailPanel({
 }
 
 /* ═══════════════════════════════════════════════════════
+   SUB-COMPONENT: SkillRadarChart (Spider/Radar Visual)
+   ═══════════════════════════════════════════════════════ */
+
+function SkillRadarChart({ nodes }: { nodes: SkillTreeNode[] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [animationReady, setAnimationReady] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimationReady(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (nodes.length === 0) return null
+
+  const skills = nodes.slice(0, 12)
+  const count = skills.length
+  const cx = 160
+  const cy = 160
+  const maxR = 120
+  const levels = [25, 50, 75, 100]
+  const angleStep = (2 * Math.PI) / count
+  const startAngle = -Math.PI / 2
+
+  const getPolygonPoints = (radius: number): string => {
+    return skills.map((_, i) => {
+      const angle = startAngle + i * angleStep
+      const x = cx + radius * Math.cos(angle)
+      const y = cy + radius * Math.sin(angle)
+      return `${x},${y}`
+    }).join(' ')
+  }
+
+  const getDataPoints = (): string => {
+    return skills.map((skill, i) => {
+      const angle = startAngle + i * angleStep
+      const r = (skill.masteryScore / 100) * maxR
+      const x = cx + r * Math.cos(angle)
+      const y = cy + r * Math.sin(angle)
+      return `${x},${y}`
+    }).join(' ')
+  }
+
+  const getLabelPosition = (i: number) => {
+    const angle = startAngle + i * angleStep
+    const labelR = maxR + 28
+    return { x: cx + labelR * Math.cos(angle), y: cy + labelR * Math.sin(angle) }
+  }
+
+  const getDotPosition = (i: number) => {
+    const angle = startAngle + i * angleStep
+    const r = (skills[i].masteryScore / 100) * maxR
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
+  }
+
+  const getDotColor = (score: number) => {
+    if (score >= 90) return 'rgb(16, 185, 129)'
+    if (score >= 75) return 'rgb(20, 184, 166)'
+    if (score >= 50) return 'rgb(245, 158, 11)'
+    if (score >= 25) return 'rgb(249, 115, 22)'
+    return 'rgb(239, 68, 68)'
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-border/40 bg-card overflow-hidden"
+    >
+      <div className="px-5 py-3.5 border-b border-border/20 flex items-center gap-2">
+        <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-teal-500/15">
+          <Network className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <div>
+          <h3 className="text-[13px] font-bold text-foreground">Skill Radar</h3>
+          <p className="text-[10px] text-muted-foreground">Visual overview of your skill mastery</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center px-4 py-6">
+        <svg width="320" height="320" viewBox="0 0 320 320" className="max-w-full h-auto">
+          <defs>
+            <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgb(16, 185, 129)" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="rgb(20, 184, 166)" stopOpacity="0.12" />
+            </linearGradient>
+            <linearGradient id="radarStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgb(16, 185, 129)" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="rgb(20, 184, 166)" stopOpacity="0.8" />
+            </linearGradient>
+          </defs>
+
+          {levels.map((level) => (
+            <polygon
+              key={level}
+              points={getPolygonPoints((level / 100) * maxR)}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.5"
+              className="text-border/30"
+            />
+          ))}
+
+          {skills.map((_, i) => {
+            const angle = startAngle + i * angleStep
+            return (
+              <line
+                key={`axis-${i}`}
+                x1={cx} y1={cy}
+                x2={cx + maxR * Math.cos(angle)}
+                y2={cy + maxR * Math.sin(angle)}
+                stroke="currentColor" strokeWidth="0.5" className="text-border/20"
+              />
+            )
+          })}
+
+          {levels.map((level) => (
+            <text
+              key={`lbl-${level}`}
+              x={cx + 3} y={cy - (level / 100) * maxR - 2}
+              textAnchor="start"
+              className="fill-muted-foreground/40"
+              style={{ fontSize: '8px' }}
+            >
+              {level}%
+            </text>
+          ))}
+
+          <motion.polygon
+            points={animationReady ? getDataPoints() : getPolygonPoints(0)}
+            fill="url(#radarGradient)"
+            stroke="url(#radarStroke)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            initial={false}
+            animate={{ opacity: animationReady ? 1 : 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            style={{ transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          />
+
+          {skills.map((skill, i) => {
+            const pos = getDotPosition(i)
+            const color = getDotColor(skill.masteryScore)
+            const isHovered = hoveredIndex === i
+            return (
+              <g key={`dot-${i}`}>
+                {isHovered && (
+                  <circle cx={pos.x} cy={pos.y} r={8} fill={color} fillOpacity={0.15} className="animate-pulse" />
+                )}
+                <circle
+                  cx={pos.x} cy={pos.y}
+                  r={isHovered ? 5 : 3.5}
+                  fill={color} stroke="white" strokeWidth="1.5"
+                  className="cursor-pointer transition-all duration-200"
+                  style={{ filter: isHovered ? `drop-shadow(0 0 4px ${color})` : undefined }}
+                  onMouseEnter={() => setHoveredIndex(i)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                />
+              </g>
+            )
+          })}
+
+          {skills.map((skill, i) => {
+            const pos = getLabelPosition(i)
+            const isHovered = hoveredIndex === i
+            const angle = startAngle + i * angleStep
+            const normalizedAngle = ((angle + Math.PI * 2) % (Math.PI * 2))
+            let textAnchor: 'start' | 'middle' | 'end' = 'middle'
+            if (normalizedAngle > Math.PI * 0.25 && normalizedAngle < Math.PI * 0.75) textAnchor = 'start'
+            else if (normalizedAngle > Math.PI * 1.25 && normalizedAngle < Math.PI * 1.75) textAnchor = 'end'
+
+            return (
+              <g key={`label-${i}`} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="cursor-pointer">
+                <text
+                  x={pos.x} y={pos.y - 4}
+                  textAnchor={textAnchor} dominantBaseline="central"
+                  className={cn('transition-all duration-200', isHovered ? 'fill-foreground' : 'fill-muted-foreground')}
+                  style={{ fontSize: isHovered ? '11px' : '9px', fontWeight: isHovered ? 700 : 500 }}
+                >
+                  {skill.name.length > 14 ? skill.name.slice(0, 12) + '\u2026' : skill.name}
+                </text>
+                <text
+                  x={pos.x} y={pos.y + 8}
+                  textAnchor={textAnchor} dominantBaseline="central"
+                  className={cn(
+                    'transition-all duration-200',
+                    isHovered
+                      ? skill.masteryScore >= 75 ? 'fill-emerald-500' : skill.masteryScore >= 50 ? 'fill-amber-500' : 'fill-red-500'
+                      : 'fill-muted-foreground/60'
+                  )}
+                  style={{ fontSize: isHovered ? '10px' : '8px', fontWeight: 700 }}
+                >
+                  {skill.masteryScore}%
+                </text>
+              </g>
+            )
+          })}
+
+          <text x={cx} y={cy - 6} textAnchor="middle" dominantBaseline="central" className="fill-foreground" style={{ fontSize: '16px', fontWeight: 800 }}>
+            {Math.round(nodes.reduce((sum, n) => sum + n.masteryScore, 0) / nodes.length)}%
+          </text>
+          <text x={cx} y={cy + 10} textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" style={{ fontSize: '8px', fontWeight: 500, letterSpacing: '0.05em' }}>
+            AVERAGE
+          </text>
+        </svg>
+      </div>
+
+      <AnimatePresence>
+        {hoveredIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+            className="mx-5 mb-4 rounded-xl border border-border/30 bg-muted/30 px-4 py-2.5 flex items-center gap-3"
+          >
+            <div className={cn('size-2.5 rounded-full shrink-0', getStatusConfig(skills[hoveredIndex].status).dot)} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-foreground">{skills[hoveredIndex].name}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <Progress value={skills[hoveredIndex].masteryScore} className={cn('h-1.5 flex-1 max-w-[120px]', getStatusConfig(skills[hoveredIndex].status).bar)} />
+                <span className={cn('text-[11px] font-bold', getStatusConfig(skills[hoveredIndex].status).text)}>
+                  {skills[hoveredIndex].masteryScore}%
+                </span>
+                {getTrendIcon(skills[hoveredIndex].trend)}
+              </div>
+            </div>
+            <Badge className={cn('text-[8px] px-1.5 py-0 border-0 font-bold tracking-wider', getStatusConfig(skills[hoveredIndex].status).badgeBg, getStatusConfig(skills[hoveredIndex].status).badgeText)}>
+              {getStatusConfig(skills[hoveredIndex].status).label}
+            </Badge>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUB-COMPONENT: SkillBarChart (Horizontal Bars)
+   ═══════════════════════════════════════════════════════ */
+
+function SkillBarChart({ nodes }: { nodes: SkillTreeNode[] }) {
+  if (nodes.length === 0) return null
+
+  const sorted = [...nodes].sort((a, b) => b.masteryScore - a.masteryScore)
+
+  const getBarGradient = (score: number) => {
+    if (score >= 90) return 'from-emerald-500 to-emerald-400'
+    if (score >= 75) return 'from-teal-500 to-teal-400'
+    if (score >= 50) return 'from-amber-500 to-amber-400'
+    if (score >= 25) return 'from-orange-500 to-orange-400'
+    return 'from-red-500 to-red-400'
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      className="rounded-2xl border border-border/40 bg-card overflow-hidden"
+    >
+      <div className="px-5 py-3.5 border-b border-border/20 flex items-center gap-2">
+        <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500/15 to-cyan-500/15">
+          <TrendingUp className="size-3.5 text-teal-600 dark:text-teal-400" />
+        </div>
+        <div>
+          <h3 className="text-[13px] font-bold text-foreground">Skill Comparison</h3>
+          <p className="text-[10px] text-muted-foreground">Skills ranked by mastery level</p>
+        </div>
+      </div>
+
+      <div className="px-5 py-4 space-y-2.5">
+        {sorted.map((skill, i) => {
+          const sc = getStatusConfig(skill.status)
+          return (
+            <motion.div
+              key={skill.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="flex items-center gap-3 group"
+            >
+              <span className="text-[10px] font-bold text-muted-foreground/50 w-4 text-right shrink-0">
+                {i + 1}
+              </span>
+              <span className="text-[11px] font-medium text-foreground w-28 truncate shrink-0 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                {skill.name}
+              </span>
+              <div className="flex-1 h-3 rounded-full bg-muted/40 overflow-hidden">
+                <motion.div
+                  className={cn('h-full rounded-full bg-gradient-to-r', getBarGradient(skill.masteryScore))}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${skill.masteryScore}%` }}
+                  transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
+                />
+              </div>
+              <span className={cn('text-[11px] font-bold w-10 text-right shrink-0', sc.text)}>
+                {skill.masteryScore}%
+              </span>
+              <div className="shrink-0 w-4">
+                {getTrendIcon(skill.trend)}
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+    </motion.div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
    LOADING SKELETON
    ═══════════════════════════════════════════════════════ */
 
@@ -1040,6 +1350,12 @@ export function SkillGraphTab({ userId, onAskShijlAI }: SkillGraphTabProps) {
         insight={data.overallInsight}
         onAskShijlAI={onAskShijlAI ? () => onAskShijlAI(data.skillContextForAI) : undefined}
       />
+
+      {/* ─── Visual Skill Radar Chart ─── */}
+      <SkillRadarChart nodes={data.tree} />
+
+      {/* ─── Horizontal Bar Overview ─── */}
+      <SkillBarChart nodes={data.tree} />
 
       {/* ─── Stats Bar ─── */}
       <SkillGraphStats data={data} />

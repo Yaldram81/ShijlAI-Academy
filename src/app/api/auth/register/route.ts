@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { sendEmail, verificationOtpEmail } from '@/lib/email'
+import crypto from 'crypto'
 
+// TODO(security): Replace simpleHash with bcrypt or argon2 in production.
+// This is a weak hash only suitable for demonstration purposes.
 function simpleHash(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -11,8 +15,9 @@ function simpleHash(str: string): string {
   return 'h_' + Math.abs(hash).toString(36) + '_' + str.length
 }
 
+/** Generates a cryptographically secure 6-digit OTP. */
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return crypto.randomInt(100000, 999999).toString()
 }
 
 export async function POST(request: Request) {
@@ -27,6 +32,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Basic email format validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      )
+    }
+
+    // Password strength: minimum 8 characters
+    // TODO(security): Use a library like zxcvbn for strength validation in production.
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      )
+    }
+
     // Check if user already exists
     const existingUser = await db.user.findUnique({ where: { email } })
     if (existingUser) {
@@ -36,22 +58,27 @@ export async function POST(request: Request) {
       )
     }
 
-    // Generate OTP for verification
+    // Generate cryptographically secure OTP
     const otpCode = generateOTP()
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Create user (in production, hash the password)
+    // Create user
     const user = await db.user.create({
       data: {
         email,
         name,
         role: role || 'student',
-        passwordHash: simpleHash(password), // Demo hash - use bcrypt in production
+        passwordHash: simpleHash(password),
         otpCode,
         otpExpiresAt,
         isVerified: false,
         authProvider: 'email',
       },
+    })
+
+    // Send verification OTP email (fire-and-forget, non-blocking)
+    sendEmail(verificationOtpEmail({ fullName: name, email, otpCode })).catch((err) => {
+      console.error('[register] Failed to send verification email:', err instanceof Error ? err.message : 'Unknown')
     })
 
     return NextResponse.json({
@@ -72,11 +99,12 @@ export async function POST(request: Request) {
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       },
-      otpCode, // For demo purposes only
-      message: 'Account created. Please verify your email.',
+      // NOTE: otpCode intentionally NOT returned in response for security.
+      // Users receive it via email only.
+      message: 'Account created. Please check your email to verify your account.',
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    console.error('[register] Error:', error instanceof Error ? error.message : 'Unknown')
     return NextResponse.json(
       { error: 'Failed to create account' },
       { status: 500 }

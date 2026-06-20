@@ -91,19 +91,24 @@ export function VerifyOtpView() {
     setError('')
 
     try {
-      // Re-register to get a new OTP (demo flow)
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch('/api/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: pendingAuthEmail }),
       })
 
-      if (res.ok) {
-        setResendCooldown(RESEND_COOLDOWN)
-        setOtp('')
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to resend code')
+        return
       }
+
+      setResendCooldown(RESEND_COOLDOWN)
+      setOtp('')
+      toast.success('A new verification code has been sent to your email.')
     } catch {
-      setError('Failed to resend code')
+      setError('Failed to resend code. Please try again.')
     } finally {
       setResendLoading(false)
     }

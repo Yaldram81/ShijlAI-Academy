@@ -7,6 +7,7 @@ import {
   computeAveragePerformance,
 } from '@/services/learning-engine'
 import { getWeakTopics } from '@/services/learning-engine'
+import { AIService } from '@/services/ai'
 
 // GET /api/ai/shijlai/insights?userId=xxx&category=xxx&isRead=xxx
 export async function GET(request: NextRequest) {
@@ -128,28 +129,18 @@ export async function POST(request: NextRequest) {
     // Try LLM enhancement
     let llmInsights: Array<Record<string, unknown>> = []
     try {
-      const ZAI = (await import('z-ai-web-dev-sdk')).default
-      const zai = await ZAI.create()
-
-      const completion = await zai.chat.completions.create({
+      llmInsights = await AIService.generateJSON<Array<Record<string, unknown>>>({
+        systemPrompt: `You are a learning analytics engine for ShijlAI Academy. Analyze the student's data and generate 2-4 additional learning insights. Focus on actionable insights from the computed metrics (engagement, consistency, drop risk, performance). Each insight should have: type (strength, weakness, trend, suggestion, warning, or achievement), title, description, category (general, academic, study_habits, time_management, or quiz_performance), severity (info, warning, or critical), isActionable (boolean), actionSuggestion (string with specific advice). Return as a JSON array.`,
         messages: [
-          {
-            role: 'assistant',
-            content: `You are a learning analytics engine for ShijlAI Academy. Analyze the student's data and generate 2-4 additional learning insights. Focus on actionable insights from the computed metrics (engagement, consistency, drop risk, performance). Each insight should have: type (strength, weakness, trend, suggestion, warning, or achievement), title, description, category (general, academic, study_habits, time_management, or quiz_performance), severity (info, warning, or critical), isActionable (boolean), actionSuggestion (string with specific advice). Return as a JSON array.`,
-          },
           {
             role: 'user',
             content: `Student data: ${JSON.stringify(studentData)}`,
           },
         ],
-        thinking: { type: 'disabled' },
+        complexity: 'fast',
+        feature: 'learning_insights',
+        userId,
       })
-
-      const responseText = completion.choices[0]?.message?.content || '[]'
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        llmInsights = JSON.parse(jsonMatch[0])
-      }
     } catch (llmError) {
       console.warn('[ShijlAI Insights] LLM generation failed, using rule-based only:', llmError)
     }

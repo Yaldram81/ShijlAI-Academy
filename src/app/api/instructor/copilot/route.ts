@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // Helper: call LLM with system + user prompts
-async function callLLM(systemPrompt: string, userPrompt: string): Promise<string> {
-  const zai = await ZAI.create()
-  const completion = await zai.chat.completions.create({
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    thinking: { type: 'disabled' },
-  })
-  return completion.choices[0]?.message?.content || ''
+async function callLLM(
+  systemPrompt: string,
+  userPrompt: string,
+  instructorId?: string,
+  courseId?: string
+): Promise<string> {
+  try {
+    return await AIService.chat({
+      systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+      complexity: 'complex',
+      feature: 'instructor_copilot',
+      userId: instructorId,
+      courseId: courseId,
+    })
+  } catch (err) {
+    console.error('[callLLM] Error:', err)
+    return ''
+  }
 }
 
 // Helper: parse JSON from LLM response (strip markdown fences)
@@ -198,7 +207,7 @@ Difficulty Level: ${level || 'beginner'}
 Include 4-6 modules with 3-5 lessons each. Provide clear learning objectives, prerequisites, and estimated duration.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let generatedContent: string
   try {
@@ -243,7 +252,7 @@ Generate 6-10 specific, measurable learning outcomes starting with "Students wil
 Topic: ${topic}
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let outcomes: unknown
   try {
@@ -277,7 +286,7 @@ Topic: ${topic}
 Include introduction, key concepts (3-5), examples (2-3), applications (2-3), summary, 3-5 quiz questions with answers, and references.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let structureContent: string
   try {
@@ -333,7 +342,7 @@ Lesson Structure: ${structureContext}
 Write comprehensive notes, detailed examples (2-3), practical exercises (2-3), and a summary.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, lesson.courseId || undefined)
 
   let lessonContent: string
   try {
@@ -386,7 +395,7 @@ Difficulty: ${diff}
 Include a mix of the specified question types. Each question should have a clear correct answer and explanation.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let generatedContent: string
   try {
@@ -440,7 +449,7 @@ ${deadline ? `Deadline: ${deadline}` : ''}
 Create a comprehensive assignment with clear problem statement, detailed instructions, specific deliverables, and submission format.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let generatedContent: string
   try {
@@ -489,7 +498,7 @@ ${assignmentId ? 'This rubric is for a specific assignment.' : ''}
 Create 4-6 criteria with 4 performance levels each. Ensure weights total 100.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let generatedContent: string
   try {
@@ -555,7 +564,7 @@ Focus on:
 Provide specific, actionable insights.
 Respond with JSON only:`
 
-  const response = await callLLM(systemPrompt, userPrompt)
+  const response = await callLLM(systemPrompt, userPrompt, instructorId, courseId)
 
   let insights: unknown
   try {
@@ -635,3 +644,4 @@ async function handleReviewApprove(body: {
 
   return NextResponse.json({ record: updated, type, action: reviewAction })
 }
+

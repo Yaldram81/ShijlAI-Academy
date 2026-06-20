@@ -1,7 +1,11 @@
 // ─── Email Service ──────────────────────────────────────────────────────────
-// Enterprise email service for instructor application workflow
-// Uses z-ai-web-dev-sdk LLM for email content generation if needed,
-// and provides structured templates for all application lifecycle emails.
+// Production email service for ShijlAI Academy
+// Uses nodemailer with Gmail SMTP (app password) for real email delivery.
+// Credentials are read exclusively from environment variables — never hardcoded.
+
+import nodemailer from 'nodemailer'
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface EmailPayload {
   to: string
@@ -11,66 +15,73 @@ interface EmailPayload {
   from?: string
 }
 
-// Email log entry for tracking
-interface EmailLogEntry {
-  to: string
-  subject: string
-  status: 'sent' | 'failed' | 'queued'
-  sentAt: string
-  error?: string
-}
+// ─── SMTP Transporter ────────────────────────────────────────────────────────
+// Reads credentials from environment variables. Fails loudly if not configured.
 
-// In-memory email log (production would use a proper email provider)
-const emailLog: EmailLogEntry[] = []
+function createTransporter() {
+  const host = process.env.SMTP_HOST
+  const port = parseInt(process.env.SMTP_PORT || '587', 10)
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
+  const fromName = process.env.SMTP_FROM_NAME || 'ShijlAI Academy'
 
-/**
- * Send an email. In production, this would integrate with:
- * - Resend (recommended for Next.js)
- * - SendGrid
- * - AWS SES
- * - Nodemailer with SMTP
- * 
- * For now, we log the email and simulate sending.
- */
-export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; messageId: string }> {
-  const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-  
-  try {
-    // In production, replace with actual email provider:
-    // const result = await resend.emails.send({ from: 'ShijlAI Academy <noreply@shijlai.com>', ...payload })
-    
-    // Log the email for debugging/audit
-    console.log(`📧 Email sent to: ${payload.to} | Subject: ${payload.subject}`)
-    
-    emailLog.push({
-      to: payload.to,
-      subject: payload.subject,
-      status: 'sent',
-      sentAt: new Date().toISOString(),
-    })
+  if (!host || !user || !pass) {
+    // TODO(security): In production, fail hard if SMTP credentials are missing.
+    // Currently we log a warning and allow the app to degrade gracefully.
+    console.warn('[email] SMTP credentials not fully configured. Emails will not be sent.')
+    return null
+  }
 
-    return { success: true, messageId }
-  } catch (error) {
-    console.error('Email send error:', error)
-    emailLog.push({
-      to: payload.to,
-      subject: payload.subject,
-      status: 'failed',
-      sentAt: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-    })
-    return { success: false, messageId }
+  return {
+    transporter: nodemailer.createTransport({
+      host,
+      port,
+      secure: false, // STARTTLS on port 587
+      requireTLS: true,
+      auth: { user, pass },
+      tls: {
+        minVersion: 'TLSv1.2',
+      },
+    }),
+    from: `"${fromName}" <${user}>`,
   }
 }
 
 /**
- * Get email log for debugging
+ * Send a transactional email via Gmail SMTP.
+ * Falls back gracefully if SMTP is not configured (logs to console).
  */
-export function getEmailLog(): EmailLogEntry[] {
-  return [...emailLog]
+export async function sendEmail(
+  payload: EmailPayload
+): Promise<{ success: boolean; messageId: string }> {
+  const messageId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+  const smtp = createTransporter()
+  if (!smtp) {
+    // Degraded mode — log the email so devs can see it
+    console.log(`[email:mock] To: ${payload.to} | Subject: ${payload.subject}`)
+    return { success: false, messageId }
+  }
+
+  try {
+    const info = await smtp.transporter.sendMail({
+      from: payload.from || smtp.from,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+    })
+
+    console.log(`[email] Sent to: ${payload.to} | Subject: ${payload.subject} | ID: ${info.messageId}`)
+    return { success: true, messageId: info.messageId || messageId }
+  } catch (error) {
+    // Log error details server-side only — never expose to client
+    console.error('[email] Send error:', error instanceof Error ? error.message : 'Unknown error')
+    return { success: false, messageId }
+  }
 }
 
-// ─── Email Templates ────────────────────────────────────────────────────────
+// ─── Base Template ───────────────────────────────────────────────────────────
 
 function baseTemplate(content: string, previewText: string): string {
   return `<!DOCTYPE html>
@@ -84,14 +95,15 @@ function baseTemplate(content: string, previewText: string): string {
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
     .header { background: linear-gradient(135deg, #10b981, #0d9488); padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
     .header h1 { color: white; margin: 0; font-size: 24px; }
-    .header p { color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px; }
+    .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }
     .content { background: white; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
     .content h2 { color: #1e293b; font-size: 18px; margin: 0 0 16px; }
     .content p { color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
     .content .highlight { background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
     .content .warning { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
     .content .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #10b981, #0d9488); color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; }
+    .content .danger-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #10b981, #0d9488); color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; }
     .footer { background: #f8fafc; padding: 20px 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; text-align: center; }
     .footer p { color: #94a3b8; font-size: 12px; margin: 4px 0; }
     .footer a { color: #10b981; }
@@ -101,6 +113,7 @@ function baseTemplate(content: string, previewText: string): string {
     .step-text { padding-top: 4px; }
     .step-text strong { color: #1e293b; }
     .step-text span { color: #64748b; font-size: 13px; }
+    .otp-box { background: #f1f5f9; border: 2px dashed #10b981; padding: 20px 16px; border-radius: 12px; font-family: 'Courier New', monospace; font-size: 36px; text-align: center; letter-spacing: 8px; color: #0f172a; font-weight: 800; margin: 20px 0; }
     .code-box { background: #f1f5f9; border: 1px dashed #cbd5e1; padding: 12px 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 16px; text-align: center; letter-spacing: 2px; color: #1e293b; font-weight: 700; }
   </style>
 </head>
@@ -116,7 +129,7 @@ function baseTemplate(content: string, previewText: string): string {
     <div class="footer">
       <p>ShijlAI Academy — The World's AI-Powered Learning Platform</p>
       <p><a href="https://shijlai.com">shijlai.com</a> | <a href="mailto:support@shijlai.com">support@shijlai.com</a></p>
-      <p style="margin-top: 12px; color: #cbd5e1;">This email was sent regarding your instructor application. If you did not apply, please ignore this email.</p>
+      <p style="margin-top: 12px; color: #cbd5e1;">If you did not perform this action, please ignore this email or contact support.</p>
     </div>
   </div>
 </body>
@@ -127,12 +140,261 @@ function baseText(content: string): string {
   return `SHIJLAI ACADEMY\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n${content}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nShijlAI Academy — The World's AI-Powered Learning Platform\nshijlai.com | support@shijlai.com`
 }
 
+// ─── New Auth Email Templates ─────────────────────────────────────────────────
+
+/**
+ * OTP verification email sent on new account registration.
+ */
+export function verificationOtpEmail(data: {
+  fullName: string
+  email: string
+  otpCode: string
+}) {
+  const html = `
+    <h2>Welcome to ShijlAI Academy, ${data.fullName}! 🎉</h2>
+    <p>Thank you for creating an account. To get started, please verify your email address using the code below.</p>
+    
+    <div class="otp-box">${data.otpCode}</div>
+    
+    <div class="highlight">
+      <p style="margin:0"><strong>⏱ This code expires in 10 minutes.</strong></p>
+      <p style="margin:8px 0 0;font-size:13px;color:#64748b;">If you didn't create an account, please ignore this email.</p>
+    </div>
+    
+    <p style="font-size:13px;color:#64748b;">For security, never share this code with anyone. ShijlAI Academy will never ask for your OTP.</p>
+  `
+  const text = `Welcome to ShijlAI Academy, ${data.fullName}!
+
+Your email verification code is: ${data.otpCode}
+
+This code expires in 10 minutes. If you did not create an account, please ignore this email.`
+
+  return {
+    to: data.email,
+    subject: `${data.otpCode} — Verify Your ShijlAI Academy Account`,
+    html: baseTemplate(html, 'Verify your email to get started'),
+    text: baseText(text),
+  }
+}
+
+/**
+ * OTP resend email — same as verification but with a slightly different message.
+ */
+export function resendOtpEmail(data: {
+  fullName: string
+  email: string
+  otpCode: string
+}) {
+  const html = `
+    <h2>New Verification Code, ${data.fullName} 🔑</h2>
+    <p>You requested a new email verification code. Here it is:</p>
+    
+    <div class="otp-box">${data.otpCode}</div>
+    
+    <div class="highlight">
+      <p style="margin:0"><strong>⏱ This code expires in 10 minutes.</strong></p>
+      <p style="margin:8px 0 0;font-size:13px;color:#64748b;">Your previous code is now invalid.</p>
+    </div>
+    
+    <p style="font-size:13px;color:#64748b;">For security, never share this code with anyone.</p>
+  `
+  const text = `Your new ShijlAI Academy verification code is: ${data.otpCode}
+
+This code expires in 10 minutes. Your previous code is now invalid.`
+
+  return {
+    to: data.email,
+    subject: `${data.otpCode} — New Verification Code for ShijlAI Academy`,
+    html: baseTemplate(html, 'Your new verification code'),
+    text: baseText(text),
+  }
+}
+
+/**
+ * Welcome email sent after successful account verification.
+ */
+export function welcomeEmail(data: {
+  fullName: string
+  email: string
+  role: string
+}) {
+  const roleMessage = data.role === 'instructor'
+    ? 'You can now create and publish courses to thousands of learners.'
+    : 'Start exploring courses and begin your AI-powered learning journey.'
+
+  const html = `
+    <h2>Your Account is Verified! 🚀</h2>
+    <p>Hi ${data.fullName}, your ShijlAI Academy account has been successfully verified. ${roleMessage}</p>
+    
+    <div class="highlight">
+      <p style="margin:0"><strong>What you can do now:</strong></p>
+      <ul style="margin:8px 0 0;padding-left:20px;color:#475569;">
+        ${data.role === 'instructor'
+          ? '<li>Create AI-assisted courses with our Copilot</li><li>Manage students and track their progress</li><li>Earn revenue from your courses</li>'
+          : '<li>Enroll in hundreds of courses</li><li>Track your progress and earn badges</li><li>Chat with ShijlAI, your AI tutor</li>'
+        }
+      </ul>
+    </div>
+    
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to Dashboard →</a>
+    </div>
+  `
+  const text = `Welcome to ShijlAI Academy, ${data.fullName}!
+
+Your account has been verified. ${roleMessage}
+
+Visit your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`
+
+  return {
+    to: data.email,
+    subject: `Welcome to ShijlAI Academy — Your Account is Ready! 🎓`,
+    html: baseTemplate(html, 'Your account has been verified'),
+    text: baseText(text),
+  }
+}
+
+/**
+ * Password reset link email.
+ */
+export function resetPasswordEmail(data: {
+  fullName: string
+  email: string
+  resetLink: string
+}) {
+  const html = `
+    <h2>Reset Your Password 🔒</h2>
+    <p>Hi ${data.fullName}, we received a request to reset the password for your ShijlAI Academy account.</p>
+    
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${data.resetLink}" class="btn">Reset My Password →</a>
+    </div>
+    
+    <div class="warning">
+      <p style="margin:0"><strong>⏱ This link expires in 30 minutes.</strong></p>
+      <p style="margin:8px 0 0;font-size:13px;">If you didn't request a password reset, you can safely ignore this email. Your password will not change.</p>
+    </div>
+    
+    <p style="font-size:13px;color:#64748b;margin-top:20px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+    <p style="font-size:12px;color:#94a3b8;word-break:break-all;">${data.resetLink}</p>
+  `
+  const text = `Reset Your ShijlAI Academy Password
+
+Hi ${data.fullName},
+
+Click this link to reset your password (expires in 30 minutes):
+${data.resetLink}
+
+If you did not request a password reset, please ignore this email.`
+
+  return {
+    to: data.email,
+    subject: `Reset Your ShijlAI Academy Password`,
+    html: baseTemplate(html, 'Reset your password'),
+    text: baseText(text),
+  }
+}
+
+/**
+ * Confirmation email sent after a successful password change.
+ */
+export function passwordChangedEmail(data: {
+  fullName: string
+  email: string
+}) {
+  const html = `
+    <h2>Password Changed Successfully ✅</h2>
+    <p>Hi ${data.fullName}, your ShijlAI Academy account password has been successfully changed.</p>
+    
+    <div class="highlight">
+      <p style="margin:0"><strong>Time of change:</strong> ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })} (PKT)</p>
+    </div>
+    
+    <div class="danger-box">
+      <p style="margin:0"><strong>⚠️ Wasn't you?</strong></p>
+      <p style="margin:8px 0 0;">If you did not make this change, your account may have been compromised. Contact us immediately at <a href="mailto:support@shijlai.com">support@shijlai.com</a>.</p>
+    </div>
+    
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to Dashboard →</a>
+    </div>
+  `
+  const text = `Your ShijlAI Academy password has been changed.
+
+Time: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })} (PKT)
+
+If you did not make this change, contact support immediately at support@shijlai.com.`
+
+  return {
+    to: data.email,
+    subject: `Your Password Has Been Changed — ShijlAI Academy`,
+    html: baseTemplate(html, 'Your password was successfully changed'),
+    text: baseText(text),
+  }
+}
+
+/**
+ * Enrollment confirmation email sent when a student enrolls in a course.
+ */
+export function enrollmentConfirmationEmail(data: {
+  fullName: string
+  email: string
+  courseTitle: string
+  courseCategory: string
+  instructorName: string
+}) {
+  const html = `
+    <h2>You're Enrolled! 🎉</h2>
+    <p>Hi ${data.fullName}, congratulations on enrolling in your new course!</p>
+    
+    <div class="highlight">
+      <p style="margin:0"><strong>${data.courseTitle}</strong></p>
+      <p style="margin:6px 0 0;font-size:14px;color:#475569;">Category: ${data.courseCategory} • Instructor: ${data.instructorName}</p>
+    </div>
+    
+    <h2>Tips to Get Started</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Watch the first lesson</strong><br><span>Start with the introduction and get familiar with the course structure.</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Set a learning goal</strong><br><span>Define how many hours per week you want to dedicate to this course.</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Ask ShijlAI for help</strong><br><span>Use the AI tutor whenever you have questions about the material.</span></div>
+      </div>
+    </div>
+    
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Start Learning →</a>
+    </div>
+  `
+  const text = `You're Enrolled — ${data.courseTitle}!
+
+Hi ${data.fullName}, you have successfully enrolled in "${data.courseTitle}" by ${data.instructorName}.
+
+Start learning: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`
+
+  return {
+    to: data.email,
+    subject: `You're Enrolled: ${data.courseTitle} — ShijlAI Academy`,
+    html: baseTemplate(html, `You're enrolled in ${data.courseTitle}`),
+    text: baseText(text),
+  }
+}
+
+// ─── Existing Instructor Application Templates ────────────────────────────────
+
 // 1. Application Confirmation Email
 export function applicationConfirmationEmail(data: {
   fullName: string
   email: string
   applicationCode: string
 }) {
+  const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}?view=application-status&code=${data.applicationCode}`
   const html = `
     <h2>Application Received, ${data.fullName}! 🎉</h2>
     <p>Thank you for applying to become an instructor on ShijlAI Academy. We've received your application and our team will review it carefully.</p>
@@ -141,6 +403,9 @@ export function applicationConfirmationEmail(data: {
       <p style="margin:0"><strong>Your Application Tracking Code:</strong></p>
       <div class="code-box">${data.applicationCode}</div>
       <p style="margin:8px 0 0;font-size:13px;color:#64748b;">Save this code to track your application status at any time.</p>
+      <div style="text-align:center;margin:16px 0;">
+        <a href="${trackingLink}" class="btn">Track Application Status →</a>
+      </div>
     </div>
     
     <h2>What Happens Next?</h2>
@@ -155,7 +420,7 @@ export function applicationConfirmationEmail(data: {
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-text"><strong>Decision & Onboarding</strong><br><span>You'll receive our decision and, if approved, your instructor account credentials.</span></div>
+        <div class="step-text"><strong>Decision &amp; Onboarding</strong><br><span>You'll receive our decision and, if approved, your instructor account credentials.</span></div>
       </div>
     </div>
     
@@ -167,6 +432,7 @@ export function applicationConfirmationEmail(data: {
 Thank you for applying to become an instructor on ShijlAI Academy.
 
 Your Application Tracking Code: ${data.applicationCode}
+Track your application status here: ${trackingLink}
 
 What Happens Next:
 1. Application Review — Our team reviews your application within 3-5 business days.
@@ -213,7 +479,7 @@ export function applicationUnderReviewEmail(data: {
 Application Status: Under Review
 Tracking Code: ${data.applicationCode}
 
-Our team is carefully evaluating your expertise, experience, and teaching approach. We may verify your LinkedIn profile and portfolio, assess your subject matter expertise, and evaluate your teaching approach.
+Our team is carefully evaluating your expertise, experience, and teaching approach.
 
 We'll notify you of the next steps within 2-3 business days.`
 
@@ -374,7 +640,7 @@ export function applicationApprovedEmail(data: {
     </div>
     
     <div style="text-align:center;margin:20px 0;">
-      <a href="https://shijlai.com" class="btn">Go to Instructor Dashboard</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Go to Instructor Dashboard</a>
     </div>
   `
   const text = `Welcome, ${data.fullName}!
@@ -518,7 +784,7 @@ export function newApplicationAdminEmail(data: {
     </div>
     
     <div style="text-align:center;margin:20px 0;">
-      <a href="https://shijlai.com/admin/applications" class="btn">Review Application</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/applications" class="btn">Review Application</a>
     </div>
   `
   const text = `New Instructor Application
@@ -527,9 +793,7 @@ Applicant: ${data.applicantName}
 Email: ${data.applicantEmail}
 Expertise: ${data.expertise}
 Experience: ${data.experience}
-Code: ${data.applicationCode}
-
-Review at: https://shijlai.com/admin/applications`
+Code: ${data.applicationCode}`
 
   return {
     to: data.adminEmail,
@@ -560,7 +824,7 @@ export function onboardingCompleteEmail(data: {
     </div>
     
     <div style="text-align:center;margin:20px 0;">
-      <a href="https://shijlai.com" class="btn">Create Your First Course</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}" class="btn">Create Your First Course</a>
     </div>
   `
   const text = `You're All Set, ${data.fullName}!

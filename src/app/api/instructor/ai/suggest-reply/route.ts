@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { studentName, courseName, lastMessage } = body
+    const { studentName, courseName, lastMessage, moduleId, courseId } = body
 
     if (!studentName || !courseName || !lastMessage) {
       return NextResponse.json(
@@ -12,8 +12,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const sdk = await ZAI.create()
 
     const prompt = `You are an AI assistant helping a course instructor draft a reply to a student message on an online learning platform (ShijlAI Academy, a global learning platform).
 
@@ -33,12 +31,20 @@ Instructions:
 
 Reply:`
 
-    const result = await sdk.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'deepseek-ai/DeepSeek-V3',
-    })
+    let response = ''
+    try {
+      response = await AIService.chat({
+        messages: [{ role: 'user', content: prompt }],
+        complexity: 'fast',
+        feature: 'suggest_reply',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('[AI Suggest Reply] AIService error:', err)
+    }
 
-    const suggestion = result.choices?.[0]?.message?.content?.trim() || 
+    const suggestion = response?.trim() || 
       `Thank you for reaching out, ${studentName}! I'll look into this for you. In the meantime, please review the relevant course materials and feel free to ask if you have more questions.`
 
     return NextResponse.json({ suggestion })
@@ -50,3 +56,4 @@ Reply:`
     )
   }
 }
+

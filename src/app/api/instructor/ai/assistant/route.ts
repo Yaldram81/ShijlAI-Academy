@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 const SYSTEM_PROMPT = `You are a helpful AI assistant for course instructors on the ShijlAI Academy platform. Your role is to support instructors with:
 
@@ -17,7 +17,7 @@ Always provide clear, practical, and culturally inclusive advice. Use examples a
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { message, history } = body
+    const { message, history, moduleId, courseId } = body
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -38,18 +38,23 @@ export async function POST(request: NextRequest) {
       : []
 
     const messages = [
-      { role: 'system' as const, content: SYSTEM_PROMPT },
       ...validatedHistory,
       { role: 'user' as const, content: message },
     ]
 
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
-      messages,
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content ?? ''
+    let response = ''
+    try {
+      response = await AIService.chat({
+        systemPrompt: SYSTEM_PROMPT,
+        messages,
+        complexity: 'fast',
+        feature: 'instructor_assistant',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('[AI Assistant Error]', err)
+    }
 
     return NextResponse.json({ content: response, response })
   } catch (error: any) {
@@ -60,3 +65,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

@@ -7,16 +7,29 @@ import {
   interviewScheduledEmail,
   applicationApprovedEmail,
   applicationRejectedEmail,
+  onboardingCompleteEmail,
 } from '@/lib/email'
+import crypto from 'crypto'
 
-// Generate random password
+
+// Generate random password using CSPRNG
+// TODO(security): Replace simpleHash with bcrypt/argon2 in production
 function generateRandomPassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%'
-  let password = ''
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
+  // Generate 12 cryptographically random bytes and encode to base64, then slice to create readable password
+  const randomBytes = crypto.randomBytes(16).toString('base64')
+  // Mix in guaranteed character classes for policy compliance
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const lower = 'abcdefghijkmnopqrstuvwxyz'
+  const digits = '23456789'
+  const special = '!@#$%'
+  const base = randomBytes.replace(/[^A-Za-z0-9]/g, '').slice(0, 8)
+  return (
+    upper[crypto.randomInt(0, upper.length)] +
+    lower[crypto.randomInt(0, lower.length)] +
+    digits[crypto.randomInt(0, digits.length)] +
+    special[crypto.randomInt(0, special.length)] +
+    base
+  )
 }
 
 // Simple hash (matches existing auth setup — production should use bcrypt)
@@ -653,6 +666,25 @@ export async function PATCH(
         performedBy: adminId,
         performedByName: adminName,
       })
+
+      // Send onboarding completion email
+      try {
+        await sendEmail(onboardingCompleteEmail({
+          fullName: application.fullName,
+          email: application.email,
+        }))
+        await db.instructorApplication.update({
+          where: { id },
+          data: { onboardingEmailSent: true },
+        })
+        await addTimeline({
+          applicationId: id,
+          event: 'email_sent',
+          title: 'Onboarding Complete Email Sent',
+          description: `Sent onboarding completion email to ${application.email}`,
+          performedBy: 'system',
+        })
+      } catch (e) { console.error('Email error:', e) }
 
       return NextResponse.json({ application: { id: updated.id, status: updated.status }, message: 'Marked as onboarded' })
     }

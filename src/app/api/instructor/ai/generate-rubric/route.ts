@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/generate-rubric - Generate a standalone grading rubric
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { topic, criteriaCount, gradingScale, assignmentType } = body
+    const { topic, criteriaCount, gradingScale, assignmentType, moduleId, courseId } = body
 
     if (!topic) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 })
@@ -15,11 +15,9 @@ export async function POST(request: NextRequest) {
     const resolvedGradingScale = gradingScale || '4-Point'
     const resolvedAssignmentType = assignmentType || 'Essay'
 
-    const zai = await ZAI.create()
-
     const systemPrompt = `You are an expert rubric designer specializing in creating clear, fair, and comprehensive grading rubrics.
 
-IMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text.
+IMPORTANT: You MUST respond with valid JSON only.
 The JSON must follow this exact structure:
 {
   "title": "Rubric Title",
@@ -72,39 +70,30 @@ Number of Criteria: ${resolvedCriteriaCount}
 Grading Scale: ${resolvedGradingScale}
 
 Create specific, measurable criteria with clear performance level descriptions.
-Ensure weights total 100 points.
-Respond with JSON only:`
+Ensure weights total 100 points.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
-
-    if (!response) {
-      return NextResponse.json({ error: 'AI failed to generate rubric. Please try again.' }, { status: 422 })
-    }
-
+    let rubric: any = null
     try {
-      let cleaned = response.trim()
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-      }
-      const parsed = JSON.parse(cleaned)
-      if (parsed.criteria && Array.isArray(parsed.criteria)) {
-        return NextResponse.json({ rubric: parsed, content: response })
-      }
-    } catch {
-      // fall through
+      rubric = await AIService.generateJSON<any>({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'rubric_generator',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate rubric JSON:', err)
     }
 
-    return NextResponse.json({ content: response })
+    if (!rubric || !rubric.criteria || !Array.isArray(rubric.criteria)) {
+      return NextResponse.json({ error: 'AI failed to generate a valid rubric. Please try again.' }, { status: 422 })
+    }
+
+    return NextResponse.json({ rubric, content: JSON.stringify(rubric) })
   } catch (error) {
     console.error('Error generating rubric:', error)
     return NextResponse.json({ error: 'Failed to generate rubric' }, { status: 500 })
   }
 }
+

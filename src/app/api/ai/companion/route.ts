@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { AIService } from '@/services/ai'
 
 /* ═══════════════════════════════════════════════════════
    AI Companion API — Proactive AI Mentor
@@ -978,16 +979,15 @@ STUDY PLANS:
 ${data.studyPlans.map(p => `- ${p.courseName ?? 'Plan'}: ${Math.round(p.progress)}% complete${p.examDate ? `, exam in ${Math.ceil((new Date(p.examDate).getTime() - Date.now()) / 86400000)} days` : ''}`).join('\n') || '- No active study plans'}`
 
   try {
-    const ZAI = (await import('z-ai-web-dev-sdk')).default
-    const zai = await ZAI.create()
-    const completion = await zai.chat.completions.create({
+    const aiResponse = await AIService.chat({
+      systemPrompt,
       messages: [
-        { role: 'assistant', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      thinking: { type: 'disabled' },
+      complexity: 'fast',
+      feature: 'ai_companion',
     })
-    return completion.choices[0]?.message?.content || "I'd love to help you with that! Based on your progress, I recommend starting with a quick review session. What topic would you like to focus on?"
+    return aiResponse || "I'd love to help you with that! Based on your progress, I recommend starting with a quick review session. What topic would you like to focus on?"
   } catch (error) {
     console.error('[AI Companion Chat] LLM error:', error)
     // Fallback response based on student context

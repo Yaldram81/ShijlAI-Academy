@@ -17,6 +17,7 @@ const viewLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
   'register': () => import('@/components/views/register-view').then(m => ({ default: m.RegisterView })),
   'forgot-password': () => import('@/components/views/forgot-password-view').then(m => ({ default: m.ForgotPasswordView })),
   'verify-otp': () => import('@/components/views/verify-otp-view').then(m => ({ default: m.VerifyOtpView })),
+  'reset-password': () => import('@/components/views/reset-password-view').then(m => ({ default: m.ResetPasswordView })),
   'public-courses': () => import('@/components/views/public-courses-view').then(m => ({ default: m.PublicCoursesView })),
   'public-course-detail': () => import('@/components/views/public-course-detail-view').then(m => ({ default: m.PublicCourseDetailView })),
   'pricing': () => import('@/components/views/pricing-view').then(m => ({ default: m.PricingView })),
@@ -139,7 +140,7 @@ const publicPageTransition = {
   transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
 }
 
-const authViews: View[] = ['login', 'register', 'forgot-password', 'verify-otp']
+const authViews: View[] = ['login', 'register', 'forgot-password', 'verify-otp', 'reset-password']
 const publicViews: View[] = ['landing', 'public-courses', 'public-course-detail', 'pricing', 'instructors', 'about', 'blog', 'blog-detail']
 
 // resolveViewKey is now imported from @/lib/view-utils
@@ -172,6 +173,20 @@ export default function Home() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Handle URL-based navigation (e.g., ?view=reset-password&token=xxx, ?view=application-status&code=xxx from email links)
+  const { setCurrentView } = useAppStore()
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const view = params.get('view')
+    if (view === 'reset-password') {
+      setCurrentView('reset-password')
+    } else if (view === 'application-status') {
+      setCurrentView('application-status')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Scroll to top when view changes
   useEffect(() => {

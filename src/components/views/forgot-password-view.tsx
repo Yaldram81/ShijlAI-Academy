@@ -8,7 +8,6 @@ import {
   Loader2,
   ArrowLeft,
   ShieldCheck,
-  Check,
 } from 'lucide-react'
 import { ShijlAIBrand } from '@/components/ui/brand-text'
 import { useAppStore } from '@/lib/store'
@@ -24,7 +23,6 @@ export function ForgotPasswordView() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [resetTokenToast, setResetTokenToast] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,12 +44,6 @@ export function ForgotPasswordView() {
       }
 
       setSuccess(true)
-
-      // Show reset token for demo
-      if (data.resetToken) {
-        setResetTokenToast(data.resetToken)
-        setTimeout(() => setResetTokenToast(null), 15000)
-      }
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -66,26 +58,6 @@ export function ForgotPasswordView() {
         <div className="absolute -top-40 -right-40 size-[500px] rounded-full bg-gradient-to-br from-emerald-200/40 to-teal-200/30 blur-3xl" />
         <div className="absolute -bottom-60 -left-40 size-[500px] rounded-full bg-gradient-to-tr from-teal-200/30 to-emerald-200/20 blur-3xl" />
       </div>
-
-      {/* Reset Token Demo Toast */}
-      {resetTokenToast && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 ios-glass-thick rounded-2xl ios-shadow-lg px-5 py-3.5 max-w-sm w-[90%]"
-        >
-          <div className="flex items-start gap-3">
-            <div className="flex size-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 shrink-0 mt-0.5">
-              <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[12px] text-muted-foreground font-medium">Demo Reset Token</p>
-              <p className="text-[11px] font-mono break-all text-foreground mt-0.5">{resetTokenToast}</p>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.96 }}
@@ -187,10 +159,12 @@ export function ForgotPasswordView() {
               </div>
               <h2 className="text-[24px] font-bold tracking-tight">Check Your Email</h2>
               <p className="text-[15px] text-muted-foreground mt-2 max-w-xs">
-                We&apos;ve sent a password reset link to <span className="font-semibold text-foreground">{email}</span>
+                We&apos;ve sent a password reset link to{' '}
+                <span className="font-semibold text-foreground">{email}</span>.
+                Click the link in the email to reset your password.
               </p>
               <p className="text-[13px] text-muted-foreground mt-3">
-                Didn&apos;t receive it? Check your spam folder.
+                Didn&apos;t receive it? Check your spam folder or try a different email.
               </p>
               <Button
                 onClick={() => {

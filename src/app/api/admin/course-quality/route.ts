@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // ─── Score Computation Helpers ───
 
@@ -144,7 +144,8 @@ async function computeContentScore(
     description: string
     learningObjectives: string | null
     modules: { lessons: { title: string }[] }[]
-  }
+  },
+  courseId: string
 ): Promise<number> {
   const sampleLessonTitles = course.modules
     .flatMap((m) => m.lessons.map((l) => l.title))
@@ -162,7 +163,6 @@ async function computeContentScore(
   }
 
   try {
-    const zai = await ZAI.create()
     const prompt = `Analyze this course content for quality. Rate 0-100 based on:
 - Clarity of description
 - Depth of learning objectives
@@ -176,18 +176,13 @@ Sample Lessons: ${sampleLessonTitles}
 
 Return ONLY a number between 0-100.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: 'You are an LMS course quality evaluator. Return ONLY a single number between 0-100 representing the content quality score.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      thinking: { type: 'disabled' },
+    const responseText = await AIService.chat({
+      systemPrompt: 'You are an LMS course quality evaluator. Return ONLY a single number between 0-100 representing the content quality score.',
+      messages: [{ role: 'user', content: prompt }],
+      complexity: 'complex',
+      feature: 'course_quality',
+      courseId,
     })
-
-    const responseText = completion.choices?.[0]?.message?.content ?? ''
 
     // Parse number from response
     const match = responseText.match(/\b(\d{1,3})\b/)
@@ -216,10 +211,10 @@ async function generateAIAnalysis(
   successScore: number,
   engagementScore: number,
   contentScore: number,
-  qualityScore: number
+  qualityScore: number,
+  courseId: string
 ): Promise<string> {
   try {
-    const zai = await ZAI.create()
     const prompt = `You are an LMS course quality analyst. Based on these computed quality scores, provide:
 1. Strengths (2-3 items)
 2. Weaknesses (2-3 items)
@@ -235,19 +230,15 @@ Overall: ${qualityScore}/100
 
 Keep response concise, max 200 words.`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        {
-          role: 'assistant',
-          content: 'You are an LMS course quality analyst providing concise, actionable analysis.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      thinking: { type: 'disabled' },
+    const analysisText = await AIService.chat({
+      systemPrompt: 'You are an LMS course quality analyst providing concise, actionable analysis.',
+      messages: [{ role: 'user', content: prompt }],
+      complexity: 'complex',
+      feature: 'course_quality',
+      courseId,
     })
 
-    const analysisText = completion.choices?.[0]?.message?.content ?? ''
-    return analysisText
+    return analysisText || `Course "${courseTitle}" analysis complete.`
   } catch (error) {
     console.error('[Course Quality] AI analysis error:', error)
     return `Course "${courseTitle}" has an overall quality score of ${qualityScore}/100. Structure: ${structureScore}, Assessment: ${assessmentScore}, Student Success: ${successScore}, Engagement: ${engagementScore}, Content: ${contentScore}. Review each dimension for improvement opportunities.`
@@ -333,7 +324,7 @@ async function analyzeCourse(courseId: string): Promise<Record<string, unknown> 
     modules: course.modules.map((m) => ({
       lessons: m.lessons.map((l) => ({ title: l.title })),
     })),
-  })
+  }, courseId)
 
   // Step 6: Calculate Final Score
   const qualityScore = Math.round(
@@ -360,7 +351,8 @@ async function analyzeCourse(courseId: string): Promise<Record<string, unknown> 
     successScore,
     engagementScore,
     contentScore,
-    qualityScore
+    qualityScore,
+    courseId
   )
 
   // Step 8: Upsert to database
@@ -514,3 +506,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

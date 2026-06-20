@@ -2,19 +2,123 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 // POST /api/admin/ai-config/seed — Seed default providers, models, and prompt templates
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Only seed if no providers exist yet
-    const existingProviders = await db.aIProvider.count()
-    if (existingProviders > 0) {
-      return NextResponse.json(
-        { error: 'Providers already exist. Seed is only for initial setup.', providerCount: existingProviders },
-        { status: 409 }
-      )
+    const url = new URL(request.url)
+    const reset = url.searchParams.get('reset') === 'true'
+
+    if (reset) {
+      // Clear existing records in proper dependency order
+      await db.aIUsageLog.deleteMany()
+      await db.aIModel.deleteMany()
+      await db.aIProvider.deleteMany()
+      await db.aIPromptTemplate.deleteMany()
+      await db.aIConfiguration.deleteMany()
+    } else {
+      // Only seed if no providers exist yet
+      const existingProviders = await db.aIProvider.count()
+      if (existingProviders > 0) {
+        return NextResponse.json(
+          { error: 'Providers already exist. Use ?reset=true query param to force reset.', providerCount: existingProviders },
+          { status: 409 }
+        )
+      }
     }
 
     // Seed providers with their models in a transaction
     const result = await db.$transaction(async (tx) => {
+      // ── Google Gemini (Default) ──
+      const google = await tx.aIProvider.create({
+        data: {
+          name: 'Google',
+          slug: 'google',
+          type: 'llm',
+          isActive: true,
+          isDefault: true,
+          priority: 10,
+          apiKey: process.env.GEMINI_API_KEY || null,
+          apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta',
+          healthStatus: 'healthy',
+          models: {
+            create: [
+              {
+                name: 'Gemini 2.5 Flash',
+                slug: 'gemini-2.5-flash',
+                modelId: 'gemini-2.5-flash',
+                type: 'chat',
+                isActive: true,
+                isDefault: true,
+                inputPricePer1M: 0.15,
+                outputPricePer1M: 0.60,
+                contextWindow: 1048576,
+                maxOutputTokens: 8192,
+                supportsVision: true,
+                supportsStreaming: true,
+                supportsJson: true,
+                capabilities: JSON.stringify({ function_calling: true }),
+                rpmLimit: 60,
+                tpmLimit: 1000000,
+              },
+              {
+                name: 'Gemini 2.5 Pro',
+                slug: 'gemini-2.5-pro',
+                modelId: 'gemini-2.5-pro',
+                type: 'chat',
+                isActive: true,
+                isDefault: false,
+                inputPricePer1M: 1.25,
+                outputPricePer1M: 10.00,
+                contextWindow: 1048576,
+                maxOutputTokens: 8192,
+                supportsVision: true,
+                supportsStreaming: true,
+                supportsJson: true,
+                capabilities: JSON.stringify({ function_calling: true, code_execution: true }),
+                rpmLimit: 60,
+                tpmLimit: 1000000,
+              },
+              {
+                name: 'Gemini 2.0 Flash',
+                slug: 'gemini-2.0-flash',
+                modelId: 'gemini-2.0-flash',
+                type: 'chat',
+                isActive: true,
+                isDefault: false,
+                inputPricePer1M: 0.10,
+                outputPricePer1M: 0.40,
+                contextWindow: 1048576,
+                maxOutputTokens: 8192,
+                supportsVision: true,
+                supportsStreaming: true,
+                supportsJson: true,
+                capabilities: JSON.stringify({ function_calling: true }),
+                rpmLimit: 60,
+                tpmLimit: 1000000,
+              },
+              {
+                name: 'Gemini 2.0 Flash Lite',
+                slug: 'gemini-2.0-flash-lite',
+                modelId: 'gemini-2.0-flash-lite',
+                type: 'chat',
+                isActive: true,
+                isDefault: false,
+                inputPricePer1M: 0.075,
+                outputPricePer1M: 0.30,
+                contextWindow: 1048576,
+                maxOutputTokens: 8192,
+                supportsVision: true,
+                supportsStreaming: true,
+                supportsJson: true,
+                capabilities: JSON.stringify({ function_calling: true }),
+                rpmLimit: 60,
+                tpmLimit: 1000000,
+              },
+            ],
+          },
+        },
+        include: { models: true },
+      })
+
       // ── OpenAI ──
       const openai = await tx.aIProvider.create({
         data: {
@@ -22,8 +126,8 @@ export async function POST() {
           slug: 'openai',
           type: 'llm',
           isActive: true,
-          isDefault: true,
-          priority: 10,
+          isDefault: false,
+          priority: 8,
           apiEndpoint: 'https://api.openai.com/v1',
           healthStatus: 'unknown',
           models: {
@@ -64,24 +168,6 @@ export async function POST() {
                 rpmLimit: 500,
                 tpmLimit: 200000,
               },
-              {
-                name: 'GPT-3.5 Turbo',
-                slug: 'gpt-3.5-turbo',
-                modelId: 'gpt-3.5-turbo-0125',
-                type: 'chat',
-                isActive: true,
-                isDefault: false,
-                inputPricePer1M: 0.5,
-                outputPricePer1M: 1.5,
-                contextWindow: 16385,
-                maxOutputTokens: 4096,
-                supportsVision: false,
-                supportsStreaming: true,
-                supportsJson: true,
-                capabilities: JSON.stringify({ function_calling: true }),
-                rpmLimit: 500,
-                tpmLimit: 200000,
-              },
             ],
           },
         },
@@ -96,7 +182,7 @@ export async function POST() {
           type: 'llm',
           isActive: true,
           isDefault: false,
-          priority: 8,
+          priority: 6,
           apiEndpoint: 'https://api.anthropic.com/v1',
           healthStatus: 'unknown',
           models: {
@@ -119,84 +205,37 @@ export async function POST() {
                 rpmLimit: 50,
                 tpmLimit: 80000,
               },
-              {
-                name: 'Claude 3 Haiku',
-                slug: 'claude-3-haiku',
-                modelId: 'claude-3-haiku-20240307',
-                type: 'chat',
-                isActive: true,
-                isDefault: false,
-                inputPricePer1M: 0.25,
-                outputPricePer1M: 1.25,
-                contextWindow: 200000,
-                maxOutputTokens: 4096,
-                supportsVision: true,
-                supportsStreaming: true,
-                supportsJson: true,
-                capabilities: JSON.stringify({ function_calling: true }),
-                rpmLimit: 50,
-                tpmLimit: 100000,
-              },
             ],
           },
         },
         include: { models: true },
       })
 
-      // ── Google ──
-      const google = await tx.aIProvider.create({
-        data: {
-          name: 'Google',
-          slug: 'google',
-          type: 'llm',
-          isActive: true,
-          isDefault: false,
-          priority: 6,
-          apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta',
-          healthStatus: 'unknown',
-          models: {
-            create: [
-              {
-                name: 'Gemini 1.5 Pro',
-                slug: 'gemini-1.5-pro',
-                modelId: 'gemini-1.5-pro-002',
-                type: 'chat',
-                isActive: true,
-                isDefault: true,
-                inputPricePer1M: 1.25,
-                outputPricePer1M: 5,
-                contextWindow: 2097152,
-                maxOutputTokens: 8192,
-                supportsVision: true,
-                supportsStreaming: true,
-                supportsJson: true,
-                capabilities: JSON.stringify({ function_calling: true, code_execution: true }),
-                rpmLimit: 60,
-                tpmLimit: 1000000,
-              },
-              {
-                name: 'Gemini 1.5 Flash',
-                slug: 'gemini-1.5-flash',
-                modelId: 'gemini-1.5-flash-002',
-                type: 'chat',
-                isActive: true,
-                isDefault: false,
-                inputPricePer1M: 0.075,
-                outputPricePer1M: 0.3,
-                contextWindow: 1048576,
-                maxOutputTokens: 8192,
-                supportsVision: true,
-                supportsStreaming: true,
-                supportsJson: true,
-                capabilities: JSON.stringify({ function_calling: true }),
-                rpmLimit: 60,
-                tpmLimit: 1000000,
-              },
-            ],
-          },
-        },
-        include: { models: true },
-      })
+      // Create/Update the AIConfiguration record with Google Gemini defaults
+      const gemini25Flash = google.models.find(m => m.slug === 'gemini-2.5-flash')
+      const gemini25Pro = google.models.find(m => m.slug === 'gemini-2.5-pro')
+
+      const config = await tx.aIConfiguration.findFirst()
+      if (config) {
+        await tx.aIConfiguration.update({
+          where: { id: config.id },
+          data: {
+            defaultProviderId: google.id,
+            defaultModelId: gemini25Flash?.id || null,
+            fallbackProviderId: google.id,
+            fallbackModelId: gemini25Pro?.id || null,
+          }
+        })
+      } else {
+        await tx.aIConfiguration.create({
+          data: {
+            defaultProviderId: google.id,
+            defaultModelId: gemini25Flash?.id || null,
+            fallbackProviderId: google.id,
+            fallbackModelId: gemini25Pro?.id || null,
+          }
+        })
+      }
 
       // ── Prompt Templates ──
       const promptTemplates = await Promise.all([

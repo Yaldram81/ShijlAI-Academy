@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { ThumbnailGenerator } from '@/services/ai'
 
-// POST /api/instructor/ai/generate-thumbnail - Generate course thumbnail images using AI
+// POST /api/instructor/ai/generate-thumbnail - Generate course thumbnail images using AI (SVG/CSS fallback)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -20,35 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const zai = await ZAI.create()
-
-    // Generate 4 thumbnail variants with different style prompts
-    const prompts = [
-      `Course thumbnail for "${title}", ${thumbnailStyle} style, professional, vibrant colors, educational, clean design, text overlay with course title, high quality`,
-      `Course thumbnail for "${title}", ${thumbnailStyle} style, with abstract geometric background, bold typography, educational theme, high quality`,
-      `Course thumbnail for "${title}", ${thumbnailStyle} style, gradient background, modern icon or illustration, course title visible, professional, high quality`,
-      `Course thumbnail for "${title}", ${thumbnailStyle} style, minimalist design, subtle patterns, elegant typography, educational branding, high quality`,
-    ]
-
-    // Generate each image, skipping failures
-    const images: string[] = []
-
-    for (const prompt of prompts) {
-      try {
-        const response = await zai.images.generations.create({
-          prompt,
-          size: '1344x768',
-        })
-
-        const base64 = response.data?.[0]?.base64
-        if (base64) {
-          images.push(base64)
-        }
-      } catch (err) {
-        console.error('Failed to generate thumbnail variant:', err)
-        // Skip this variant and continue with the rest
-      }
-    }
+    const images = await ThumbnailGenerator.generate(title, thumbnailStyle as any)
 
     if (images.length === 0) {
       return NextResponse.json(
@@ -63,3 +35,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to generate thumbnail images' }, { status: 500 })
   }
 }
+

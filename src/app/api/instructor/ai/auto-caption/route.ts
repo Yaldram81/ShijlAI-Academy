@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // POST /api/instructor/ai/auto-caption - Generate multilingual captions
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { content, sourceType, targetLanguage } = body
+    const { content, sourceType, targetLanguage, moduleId, courseId } = body
 
     if (!content) {
       return NextResponse.json(
@@ -16,8 +16,6 @@ export async function POST(request: NextRequest) {
 
     const type = sourceType === 'video' ? 'video' : 'text'
     const lang = targetLanguage || 'en'
-
-    const zai = await ZAI.create()
 
     const systemPrompt = `You are an expert captioning and translation specialist. Your task is to generate accurate, timestamped captions for the provided content. Follow these rules strictly:
 
@@ -40,15 +38,19 @@ ${content}`
 Text:
 ${content}`
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      thinking: { type: 'disabled' },
-    })
-
-    const response = completion.choices[0]?.message?.content
+    let response = ''
+    try {
+      response = await AIService.chat({
+        systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        complexity: 'fast',
+        feature: 'auto_caption',
+        userId: moduleId || courseId,
+        courseId: courseId || undefined,
+      })
+    } catch (err) {
+      console.error('Failed to generate captions via AIService:', err)
+    }
 
     if (!response) {
       return NextResponse.json(
@@ -69,3 +71,4 @@ ${content}`
     )
   }
 }
+

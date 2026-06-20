@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { AIService } from '@/services/ai'
 
 // GET /api/student/daily-plan?userId=xxx — AI-powered daily study plan
 export async function GET(request: NextRequest) {
@@ -275,61 +275,52 @@ ${assignmentsDue.length > 0 ? assignmentsDue.map((a) => `- ${a.title} (${a.type}
 Available Quizzes:
 ${quizzesAvailable.map((q) => `- ${q.title} (${q.type}, ${q.timeLimit || 'no'} min limit) in ${q.course}`).join('\n') || 'No quizzes available'}`
 
-      const zai = await ZAI.create()
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        thinking: { type: 'disabled' },
-      })
+      let aiPlan: any = null
+      try {
+        aiPlan = await AIService.generateJSON<any>({
+          systemPrompt,
+          messages: [
+            { role: 'user', content: userPrompt },
+          ],
+          complexity: 'fast',
+          feature: 'daily_plan_generator',
+          userId,
+        })
+      } catch (err) {
+        console.error('Failed to generate daily plan JSON:', err)
+      }
 
-      const aiResponse = completion.choices[0]?.message?.content
-
-      if (aiResponse) {
-        // Parse the JSON response from AI
-        let cleanedResponse = aiResponse.trim()
-        // Remove markdown code blocks if present
-        if (cleanedResponse.startsWith('```')) {
-          cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-        }
-
-        try {
-          const aiPlan = JSON.parse(cleanedResponse)
-          // Map AI response to frontend-expected format
-          const mappedTasks = (aiPlan.tasks || []).map((t: { type?: string; title?: string; estimatedMinutes?: number; notes?: string; course?: string }) => {
-            const typeMap: Record<string, 'watch' | 'quiz' | 'read' | 'assignment'> = {
-              lesson: 'watch',
-              video: 'watch',
-              reading: 'read',
-              read: 'read',
-              quiz: 'quiz',
-              assignment: 'assignment',
-            }
-            return {
-              task: t.title || 'Study task',
-              type: typeMap[t.type?.toLowerCase()] || 'watch',
-              duration: t.estimatedMinutes ? `${t.estimatedMinutes} min` : '20 min',
-              dueDate: undefined as string | undefined,
-            }
-          })
-          // Attach due dates from assignment data
-          for (let i = 0; i < mappedTasks.length; i++) {
-            if (mappedTasks[i].type === 'assignment' && assignmentsDue.length > 0) {
-              const idx = Math.min(i, assignmentsDue.length - 1)
-              mappedTasks[i].dueDate = assignmentsDue[idx].dueDate
-            }
+      if (aiPlan) {
+        // Map AI response to frontend-expected format
+        const mappedTasks = (aiPlan.tasks || []).map((t: { type?: string; title?: string; estimatedMinutes?: number; notes?: string; course?: string }) => {
+          const typeMap: Record<string, 'watch' | 'quiz' | 'read' | 'assignment'> = {
+            lesson: 'watch',
+            video: 'watch',
+            reading: 'read',
+            read: 'read',
+            quiz: 'quiz',
+            assignment: 'assignment',
           }
-          const totalMin = (aiPlan.totalEstimatedMinutes as number) || mappedTasks.reduce((sum: number, t: { duration: string }) => sum + parseInt(t.duration), 0)
-          return NextResponse.json({
-            plan: mappedTasks,
-            totalEstimatedTime: `${totalMin} min`,
-            aiGenerated: true,
-          })
-        } catch {
-          // JSON parsing failed, fall through to fallback
-          console.warn('AI response was not valid JSON, using fallback plan')
+          return {
+            task: t.title || 'Study task',
+            type: typeMap[t.type?.toLowerCase()] || 'watch',
+            duration: t.estimatedMinutes ? `${t.estimatedMinutes} min` : '20 min',
+            dueDate: undefined as string | undefined,
+          }
+        })
+        // Attach due dates from assignment data
+        for (let i = 0; i < mappedTasks.length; i++) {
+          if (mappedTasks[i].type === 'assignment' && assignmentsDue.length > 0) {
+            const idx = Math.min(i, assignmentsDue.length - 1)
+            mappedTasks[i].dueDate = assignmentsDue[idx].dueDate
+          }
         }
+        const totalMin = (aiPlan.totalEstimatedMinutes as number) || mappedTasks.reduce((sum: number, t: { duration: string }) => sum + parseInt(t.duration), 0)
+        return NextResponse.json({
+          plan: mappedTasks,
+          totalEstimatedTime: `${totalMin} min`,
+          aiGenerated: true,
+        })
       }
     } catch (aiError) {
       console.error('AI daily plan generation failed:', aiError)

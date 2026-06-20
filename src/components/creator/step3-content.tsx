@@ -665,58 +665,105 @@ function VideoLessonEditor({
       />
 
       {/* Video Upload */}
-      <div className="space-y-2">
-        <Label className="text-[13px] font-semibold flex items-center gap-2">
-          <Video className="size-4 text-primary" />
-          Video File
-        </Label>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-[13px] font-semibold flex items-center gap-2">
+            <Video className="size-4 text-primary" />
+            Video Source
+          </Label>
 
-        {lesson.videoUrl ? (
-          <div className="rounded-2xl ios-shadow-sm bg-card p-3 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400 shrink-0">
-              <Play className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium">{uploadedFileName || 'Video uploaded'}</p>
-              <p className="text-[11px] text-muted-foreground">{formatDuration(lesson.duration)}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-xl text-muted-foreground"
-              onClick={handleDeleteVideo}
-            >
-              <X className="size-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <div
-            onClick={() => videoInputRef.current?.click()}
-            onDrop={handleVideoDrop}
-            onDragOver={handleVideoDragOver}
-            className={cn(
-              'rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all',
-              uploading ? 'border-primary/40 bg-primary/5 pointer-events-none' : 'border-border hover:border-primary/40 hover:bg-muted/30'
-            )}
-          >
-            {uploading ? (
-              <div className="space-y-3">
-                <Loader2 className="mx-auto size-8 text-primary animate-spin" />
-                <p className="text-[13px] font-medium">Uploading {uploadedFileName}... {Math.min(Math.round(uploadProgress), 100)}%</p>
-                <Progress value={Math.min(uploadProgress, 100)} className="h-2 max-w-xs mx-auto" />
-                <p className="text-[11px] text-muted-foreground">Please don&apos;t close this page</p>
+          {lesson.videoUrl ? (
+            <div className="rounded-2xl ios-shadow-sm bg-card p-3 flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400 shrink-0">
+                <Play className="size-5" />
               </div>
-            ) : (
-              <>
-                <Upload className="mx-auto size-8 text-muted-foreground/40" />
-                <p className="mt-2 text-[13px] font-medium">
-                  Drag & drop or <span className="text-primary">browse</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium truncate">
+                  {uploadedFileName || (lesson.videoUrl.match(/^(https?:\/\/)/) && !lesson.videoUrl.startsWith('/uploads/') ? 'External Video URL' : 'Video uploaded')}
                 </p>
-                <p className="text-[11px] text-muted-foreground mt-1">MP4, WebM, MOV, AVI • Max 500MB</p>
-              </>
-            )}
-          </div>
-        )}
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {lesson.videoUrl.match(/^(https?:\/\/)/) && !lesson.videoUrl.startsWith('/uploads/') ? lesson.videoUrl : formatDuration(lesson.duration)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl text-muted-foreground shrink-0"
+                onClick={handleDeleteVideo}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div
+                onClick={() => videoInputRef.current?.click()}
+                onDrop={handleVideoDrop}
+                onDragOver={handleVideoDragOver}
+                className={cn(
+                  'rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all',
+                  uploading ? 'border-primary/40 bg-primary/5 pointer-events-none' : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                )}
+              >
+                {uploading ? (
+                  <div className="space-y-3">
+                    <Loader2 className="mx-auto size-8 text-primary animate-spin" />
+                    <p className="text-[13px] font-medium">Uploading {uploadedFileName}... {Math.min(Math.round(uploadProgress), 100)}%</p>
+                    <Progress value={Math.min(uploadProgress, 100)} className="h-2 max-w-xs mx-auto" />
+                    <p className="text-[11px] text-muted-foreground">Please don&apos;t close this page</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="mx-auto size-8 text-muted-foreground/40" />
+                    <p className="mt-2 text-[13px] font-medium">
+                      Drag & drop or <span className="text-primary">browse</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">MP4, WebM, MOV, AVI • Max 500MB</p>
+                  </>
+                )}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border/60" />
+                </div>
+                <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="bg-background px-2 text-muted-foreground">Or embed from URL</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-muted/50 shrink-0">
+                  <Link className="size-4 text-muted-foreground" />
+                </div>
+                <Input
+                  placeholder="Paste YouTube or Vimeo URL here..."
+                  className="h-9 rounded-xl text-[13px] flex-1 border-border/60"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const val = (e.target as HTMLInputElement).value.trim()
+                      if (val && (val.includes('youtube.com') || val.includes('youtu.be') || val.includes('vimeo.com'))) {
+                        onLessonUpdate({ videoUrl: val, duration: 0 })
+                      } else if (val) {
+                        toast.error('Please enter a valid YouTube or Vimeo URL')
+                      }
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim()
+                    if (val && (val.includes('youtube.com') || val.includes('youtu.be') || val.includes('vimeo.com'))) {
+                      onLessonUpdate({ videoUrl: val, duration: 0 })
+                    } else if (val) {
+                      toast.error('Please enter a valid YouTube or Vimeo URL')
+                      e.target.value = ''
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Lesson Notes / Transcript */}
@@ -1777,6 +1824,19 @@ export function Step3Content({
     })
   }, [lessonContent, editingLesson, modules, onFormChange])
 
+  // ─── Content Progress Stats ───
+  const contentStats = (() => {
+    let total = 0
+    let withContent = 0
+    modules.forEach(m => {
+      m.lessons.forEach(l => {
+        total++
+        if (l.content.trim().length > 0 || l.videoUrl) withContent++
+      })
+    })
+    return { total, withContent, percent: total > 0 ? Math.round((withContent / total) * 100) : 0 }
+  })()
+
   // If no lesson is selected, show lesson picker
   if (!editingLesson || !currentLesson) {
     return (
@@ -1787,67 +1847,181 @@ export function Step3Content({
           transition={SPRING}
           className="flex flex-col h-full"
         >
-          <div className="text-center py-6 shrink-0">
-            <BookOpen className="mx-auto size-12 text-muted-foreground/20" />
-            <h3 className="mt-3 text-[17px] font-bold text-foreground">Content Editor</h3>
-            <p className="text-[13px] text-muted-foreground mt-1">
-              Go back to the Curriculum step and click a lesson to edit its content
-            </p>
-            <Button
-              onClick={onBack}
-              className="rounded-2xl ios-press mt-4 gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-            >
-              <ArrowLeft className="size-4" />
-              Back to Curriculum
-            </Button>
-          </div>
-
-          {/* Quick overview of all lessons - scrollable */}
-          <div className="flex-1 min-h-0 overflow-y-auto mt-2 scrollbar-thin">
-            <div className="space-y-2">
-              <h4 className="text-[14px] font-semibold sticky top-0 bg-background/80 backdrop-blur-sm py-1 z-10">All Lessons</h4>
-              {modules.map((mod) => (
-                <div key={mod.id} className="space-y-1">
-                  <p className="text-[12px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <Layers className="size-3" />
-                    {mod.title}
-                  </p>
-                  {mod.lessons.map((lesson) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => onEditLesson(mod.id, lesson.id)}
-                      className="w-full rounded-xl ios-shadow-sm bg-card p-2.5 flex items-center gap-2.5 hover:border-primary/30 border border-transparent transition-colors text-left"
-                    >
-                      <ContentIcon type={lesson.type} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-medium truncate">{lesson.title}</p>
-                        <span className="text-[10px] text-muted-foreground">
-                          {formatDuration(lesson.duration)} • {LESSON_TYPES.find(lt => lt.value === lesson.type)?.label}
-                        </span>
-                      </div>
-                      {lesson.content ? (
-                        <Badge variant="outline" className="text-[9px] h-4 px-1 rounded-md bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
-                          Has content
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] h-4 px-1 rounded-md bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
-                          Needs content
-                        </Badge>
-                      )}
-                    </button>
-                  ))}
-                  {mod.lessons.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground/50 pl-8">No lessons in this module</p>
-                  )}
-                </div>
-              ))}
+          {/* ─── Header with Progress Summary ─── */}
+          <div className="shrink-0 space-y-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-[17px] font-bold text-foreground flex items-center gap-2">
+                  <BookOpen className="size-5 text-primary" />
+                  Content Editor
+                </h3>
+                <p className="text-[13px] text-muted-foreground mt-0.5">
+                  Click any lesson below to edit its content, or go back to add more lessons
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onBack}
+                className="rounded-xl ios-press gap-2 shrink-0"
+              >
+                <ArrowLeft className="size-3.5" />
+                Curriculum
+              </Button>
             </div>
+
+            {/* Progress bar */}
+            {contentStats.total > 0 && (
+              <div className="rounded-2xl ios-shadow-sm bg-card border border-border p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[13px] font-semibold">Content Progress</span>
+                  <span className="text-[12px] text-muted-foreground">
+                    <span className={cn(
+                      'font-bold',
+                      contentStats.percent === 100 ? 'text-emerald-600' :
+                      contentStats.percent >= 50 ? 'text-amber-600' : 'text-red-500'
+                    )}>
+                      {contentStats.withContent}
+                    </span>
+                    {' / '}{contentStats.total} lessons have content
+                  </span>
+                </div>
+                <Progress
+                  value={contentStats.percent}
+                  className="h-2"
+                />
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+                    <div className="size-2 rounded-full bg-emerald-500" />
+                    Complete ({contentStats.withContent})
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-600">
+                    <div className="size-2 rounded-full bg-amber-400" />
+                    Needs content ({contentStats.total - contentStats.withContent})
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between pt-3 mt-2 shrink-0 border-t border-border/60">
-            <Button variant="outline" className="rounded-2xl ios-press" onClick={onPrevious}>
-              <ArrowLeft className="size-4 mr-1 rotate-[-90deg]" />
+          {/* ─── Lesson Grid by Module ─── */}
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+            {modules.length === 0 ? (
+              <div className="text-center py-16 rounded-2xl border-2 border-dashed border-border">
+                <Layers className="mx-auto size-12 text-muted-foreground/20" />
+                <h4 className="mt-3 text-[15px] font-semibold text-muted-foreground">No Modules Yet</h4>
+                <p className="text-[12px] text-muted-foreground/70 mt-1 max-w-[280px] mx-auto">
+                  Go back to the Structure step to create modules and add lessons
+                </p>
+                <Button
+                  onClick={onBack}
+                  className="rounded-2xl ios-press mt-4 gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                >
+                  <ArrowLeft className="size-4" />
+                  Back to Structure
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {modules.map((mod, modIdx) => {
+                  const modLessonsWithContent = mod.lessons.filter(l => l.content.trim().length > 0 || l.videoUrl).length
+                  const modProgress = mod.lessons.length > 0 ? Math.round((modLessonsWithContent / mod.lessons.length) * 100) : 0
+
+                  return (
+                    <div key={mod.id} className="space-y-2.5">
+                      {/* Module Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary text-[12px] font-bold">
+                            {modIdx + 1}
+                          </div>
+                          <div>
+                            <h4 className="text-[14px] font-semibold">{mod.title || 'Untitled Module'}</h4>
+                            <p className="text-[11px] text-muted-foreground">
+                              {mod.lessons.length} lesson{mod.lessons.length !== 1 ? 's' : ''} • {modLessonsWithContent} with content
+                            </p>
+                          </div>
+                        </div>
+                        {mod.lessons.length > 0 && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] h-5 rounded-lg',
+                              modProgress === 100
+                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800'
+                                : modProgress > 0
+                                ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800'
+                                : 'bg-red-50 text-red-500 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800'
+                            )}
+                          >
+                            {modProgress}% done
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Lesson Cards */}
+                      {mod.lessons.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {mod.lessons.map((lesson, lessonIdx) => {
+                            const hasContent = lesson.content.trim().length > 0 || lesson.videoUrl
+                            return (
+                              <motion.button
+                                key={lesson.id}
+                                whileHover={{ scale: 1.01, y: -1 }}
+                                whileTap={{ scale: 0.99 }}
+                                onClick={() => onEditLesson(mod.id, lesson.id)}
+                                className={cn(
+                                  'w-full rounded-xl ios-shadow-sm bg-card p-3.5 flex items-center gap-3 border-2 transition-all text-left group',
+                                  hasContent
+                                    ? 'border-emerald-200/50 dark:border-emerald-800/30 hover:border-emerald-400/60'
+                                    : 'border-amber-200/50 dark:border-amber-800/30 hover:border-amber-400/60'
+                                )}
+                              >
+                                <ContentIcon type={lesson.type} />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[13px] font-semibold truncate group-hover:text-primary transition-colors">
+                                    {lesson.title || 'Untitled Lesson'}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {formatDuration(lesson.duration)}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">•</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {LESSON_TYPES.find(lt => lt.value === lesson.type)?.label}
+                                    </span>
+                                  </div>
+                                </div>
+                                {hasContent ? (
+                                  <div className="flex size-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+                                    <Check className="size-3.5" />
+                                  </div>
+                                ) : (
+                                  <div className="flex size-6 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 shrink-0">
+                                    <PenTool className="size-3" />
+                                  </div>
+                                )}
+                              </motion.button>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-5 rounded-xl border-2 border-dashed border-border">
+                          <p className="text-[12px] text-muted-foreground/60">
+                            No lessons in this module — add some in the Structure step
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ─── Navigation ─── */}
+          <div className="flex items-center justify-between pt-4 mt-3 shrink-0 border-t border-border/60">
+            <Button variant="outline" className="rounded-2xl ios-press gap-2" onClick={onPrevious}>
+              <ChevronDown className="size-4 rotate-90" />
               Previous
             </Button>
             <Button
@@ -1866,13 +2040,13 @@ export function Step3Content({
   return (
     <div className="flex flex-col h-full">
       {/* ─── Top Bar ─── */}
-      <div className="rounded-2xl ios-shadow-sm bg-card p-3 mb-3 shrink-0">
+      <div className="rounded-2xl ios-shadow-sm bg-card border border-border p-2 px-3 mb-3 shrink-0">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-xl ios-press gap-1 shrink-0"
+              className="rounded-xl ios-press gap-1.5 shrink-0"
               onClick={onBack}
             >
               <ArrowLeft className="size-4" />
@@ -1891,13 +2065,13 @@ export function Step3Content({
           </div>
 
           {/* Lesson Type Tabs */}
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1 bg-muted/40 rounded-xl p-1">
             {LESSON_TYPES.filter(lt => ['video', 'text', 'quiz', 'assignment'].includes(lt.value)).map((lt) => (
               <button
                 key={lt.value}
                 onClick={() => updateLesson({ type: lt.value as WizardLesson['type'] })}
                 className={cn(
-                  'rounded-xl px-3 py-1.5 text-[11px] font-medium transition-all',
+                  'rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all',
                   currentLesson.type === lt.value
                     ? 'bg-primary text-primary-foreground ios-shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -1915,88 +2089,101 @@ export function Step3Content({
       <div className="flex flex-col lg:flex-row gap-3 flex-1 min-h-0">
         {/* Left Panel (60%) - Editor */}
         <div className="lg:w-[60%] min-w-0 min-h-0 flex flex-col">
-          <ScrollArea className="flex-1">
-            <div className="pr-2">
-              <motion.div
-                key={currentLesson.type}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={SPRING}
-              >
-                {currentLesson.type === 'video' && lessonContent && (
-                  <VideoLessonEditor
-                    lesson={lessonContent}
-                    onLessonUpdate={updateLesson}
-                  />
-                )}
+          <div className="rounded-2xl ios-shadow-sm bg-card border border-border overflow-hidden flex-1 flex flex-col">
+            {/* Editor Header */}
+            <div className="p-2 px-3 border-b bg-muted/20 flex items-center gap-2 shrink-0">
+              <ContentIcon type={currentLesson.type} className="size-4" />
+              <span className="text-[13px] font-semibold">
+                {currentLesson.type === 'video' ? 'Video Lesson Editor' :
+                 currentLesson.type === 'text' ? 'Text Lesson Editor' :
+                 currentLesson.type === 'quiz' ? 'Quiz Builder' :
+                 currentLesson.type === 'assignment' ? 'Assignment Builder' :
+                 'Content Editor'}
+              </span>
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              <div className="p-4">
+                <motion.div
+                  key={currentLesson.type}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={SPRING}
+                >
+                  {currentLesson.type === 'video' && lessonContent && (
+                    <VideoLessonEditor
+                      lesson={lessonContent}
+                      onLessonUpdate={updateLesson}
+                    />
+                  )}
 
-                {currentLesson.type === 'text' && lessonContent && (
-                  <TextLessonEditor
-                    lesson={lessonContent}
-                    onLessonUpdate={updateLesson}
-                  />
-                )}
+                  {currentLesson.type === 'text' && lessonContent && (
+                    <TextLessonEditor
+                      lesson={lessonContent}
+                      onLessonUpdate={updateLesson}
+                    />
+                  )}
 
-                {currentLesson.type === 'quiz' && lessonContent && (
-                  <QuizBuilder
-                    lesson={lessonContent}
-                    onLessonUpdate={updateLesson}
-                    modules={modules}
-                    editingModuleId={editingLesson.moduleId}
-                  />
-                )}
+                  {currentLesson.type === 'quiz' && lessonContent && (
+                    <QuizBuilder
+                      lesson={lessonContent}
+                      onLessonUpdate={updateLesson}
+                      modules={modules}
+                      editingModuleId={editingLesson.moduleId}
+                    />
+                  )}
 
-                {currentLesson.type === 'assignment' && lessonContent && (
-                  <AssignmentBuilder
-                    lesson={lessonContent}
-                    onLessonUpdate={updateLesson}
-                  />
-                )}
+                  {currentLesson.type === 'assignment' && lessonContent && (
+                    <AssignmentBuilder
+                      lesson={lessonContent}
+                      onLessonUpdate={updateLesson}
+                    />
+                  )}
 
-                {(currentLesson.type === 'interactive' || currentLesson.type === 'live-session' || currentLesson.type === 'download') && lessonContent && (
-                  <div className="space-y-5">
-                    <div className="text-center py-8 rounded-2xl border-2 border-dashed border-border">
-                      <ContentIcon type={currentLesson.type} className="mx-auto size-16" />
-                      <p className="mt-3 text-[15px] font-semibold">
-                        {currentLesson.type === 'interactive' ? 'Interactive Code Lab' :
-                         currentLesson.type === 'live-session' ? 'Live Session' : 'Downloadable Resource'}
-                      </p>
-                      <p className="text-[12px] text-muted-foreground mt-1">
-                        This content type will be configured after course setup
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[13px] font-semibold">Description</Label>
-                      <Textarea
-                        value={lessonContent.description}
-                        onChange={(e) => updateLesson({ description: e.target.value })}
-                        className="rounded-2xl text-[13px] min-h-[100px] resize-y"
-                        placeholder="Describe this content..."
-                      />
-                    </div>
-                    <div className="flex items-center justify-between rounded-2xl ios-shadow-sm bg-card p-3">
-                      <div>
-                        <p className="text-[13px] font-semibold flex items-center gap-2">
-                          {lessonContent.isFree ? <Eye className="size-4 text-emerald-600" /> : <EyeOff className="size-4 text-muted-foreground" />}
-                          Free Preview
+                  {(currentLesson.type === 'interactive' || currentLesson.type === 'live-session' || currentLesson.type === 'download') && lessonContent && (
+                    <div className="space-y-5">
+                      <div className="text-center py-8 rounded-2xl border-2 border-dashed border-border">
+                        <ContentIcon type={currentLesson.type} className="mx-auto size-16" />
+                        <p className="mt-3 text-[15px] font-semibold">
+                          {currentLesson.type === 'interactive' ? 'Interactive Code Lab' :
+                           currentLesson.type === 'live-session' ? 'Live Session' : 'Downloadable Resource'}
                         </p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {lessonContent.isFree ? 'Visible to non-enrolled students' : 'Only enrolled students can access'}
+                        <p className="text-[12px] text-muted-foreground mt-1">
+                          This content type will be configured after course setup
                         </p>
                       </div>
-                      <Switch checked={lessonContent.isFree} onCheckedChange={(v) => updateLesson({ isFree: v })} />
+                      <div className="space-y-2">
+                        <Label className="text-[13px] font-semibold">Description</Label>
+                        <Textarea
+                          value={lessonContent.description}
+                          onChange={(e) => updateLesson({ description: e.target.value })}
+                          className="rounded-2xl text-[13px] min-h-[100px] resize-y"
+                          placeholder="Describe this content..."
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl ios-shadow-sm bg-muted/30 p-3">
+                        <div>
+                          <p className="text-[13px] font-semibold flex items-center gap-2">
+                            {lessonContent.isFree ? <Eye className="size-4 text-emerald-600" /> : <EyeOff className="size-4 text-muted-foreground" />}
+                            Free Preview
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {lessonContent.isFree ? 'Visible to non-enrolled students' : 'Only enrolled students can access'}
+                          </p>
+                        </div>
+                        <Switch checked={lessonContent.isFree} onCheckedChange={(v) => updateLesson({ isFree: v })} />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
+                  )}
+                </motion.div>
+              </div>
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Right Panel (40%) - Live Preview */}
         <div className="lg:w-[40%] min-w-0 min-h-0 flex flex-col">
           <div className="rounded-2xl ios-shadow-sm bg-card border border-border overflow-hidden flex-1 flex flex-col">
-            <div className="p-3 border-b bg-muted/30 flex items-center gap-2">
+            <div className="p-2 px-3 border-b bg-muted/20 flex items-center gap-2 shrink-0">
               <Eye className="size-4 text-primary" />
               <span className="text-[13px] font-semibold">Student Preview</span>
               <Badge variant="outline" className="text-[9px] h-4 px-1.5 rounded-md ml-auto">
@@ -2012,14 +2199,14 @@ export function Step3Content({
 
       {/* ─── Navigation ─── */}
       <div className="flex items-center justify-between pt-3 mt-2 shrink-0 border-t border-border/60">
-        <Button variant="outline" className="rounded-2xl ios-press" onClick={onPrevious}>
-          <ArrowLeft className="size-4 mr-1" />
+        <Button variant="outline" className="rounded-2xl ios-press gap-2" onClick={onPrevious}>
+          <ChevronDown className="size-4 rotate-90" />
           Previous
         </Button>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="rounded-2xl ios-press gap-1"
+            className="rounded-2xl ios-press gap-1.5"
             onClick={onBack}
           >
             <Layers className="size-4" />
