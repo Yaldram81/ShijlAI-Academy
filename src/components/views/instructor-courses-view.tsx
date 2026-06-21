@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -346,16 +347,12 @@ function CourseCreationWizard({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[14px] font-semibold">Course Description *</Label>
-                    <Textarea
+                    <RichTextEditor
                       placeholder="Describe what students will learn..."
-                      value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      className="rounded-xl text-[15px] min-h-[120px] resize-y"
-                      maxLength={2000}
+                      content={form.description}
+                      onChange={(content) => setForm({ ...form, description: content })}
+                      className="min-h-[150px]"
                     />
-                    <p className="text-[12px] text-muted-foreground">
-                      {form.description.length}/2000 characters
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[14px] font-semibold">Thumbnail URL</Label>
@@ -963,11 +960,11 @@ function CourseEditInfoDialog({
             </div>
             <div className="space-y-2">
               <Label className="text-[14px] font-semibold">Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="rounded-xl min-h-[100px] resize-y"
-                maxLength={2000}
+              <RichTextEditor
+                placeholder="Course description..."
+                content={form.description}
+                onChange={(content) => setForm({ ...form, description: content })}
+                className="min-h-[150px]"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

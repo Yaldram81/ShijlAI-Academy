@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { PublicFooter } from '@/components/layout/public-footer'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
@@ -57,6 +58,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Accordion,
   AccordionContent,
@@ -1605,33 +1616,6 @@ function CompareFloatingBar({
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FOOTER
-   ═══════════════════════════════════════════════════════════════ */
-
-function CoursesFooter() {
-  const { setCurrentView } = useAppStore()
-  return (
-    <footer className="border-t border-border/30 bg-card/50 mt-auto">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShijlAILogo size="xs" className="shrink-0" />
-            <span className="text-[14px] font-semibold"><ShijlAIBrand variant="compact" /></span>
-          </div>
-          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
-            <button onClick={() => setCurrentView('about')} className="hover:text-foreground transition-colors">About</button>
-            <button onClick={() => setCurrentView('blog')} className="hover:text-foreground transition-colors">Blog</button>
-            <button onClick={() => setCurrentView('pricing')} className="hover:text-foreground transition-colors">Pricing</button>
-            <button onClick={() => setCurrentView('instructors')} className="hover:text-foreground transition-colors">Teach</button>
-          </div>
-          <p className="text-[11px] text-muted-foreground/60">&copy; {new Date().getFullYear()} <ShijlAIBrand variant="compact" />. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════════
    MAIN COMPONENT: PUBLIC COURSES VIEW
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1667,6 +1651,10 @@ export function PublicCoursesView() {
   // Compare
   const [compareIds, setCompareIds] = useState<string[]>([])
   const [compareDialogOpen, setCompareDialogOpen] = useState(false)
+
+  // Enrollment Modal
+  const [courseToEnroll, setCourseToEnroll] = useState<string | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
 
   // Quick preview
   const [previewCourse, setPreviewCourse] = useState<CourseWithExtras | null>(null)
@@ -1865,17 +1853,23 @@ export function PublicCoursesView() {
   }, [fetchCourses, filters.search])
 
   // ─── Enroll handler ───
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = (courseId: string) => {
     if (!isAuthenticated || !currentUser) {
       toast.error('Please log in to enroll')
       setCurrentView('register')
       return
     }
+    setCourseToEnroll(courseId)
+  }
+
+  const confirmEnroll = async () => {
+    if (!courseToEnroll || !currentUser) return
+    setEnrolling(true)
     try {
       const res = await fetch('/api/enrollments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id, courseId }),
+        body: JSON.stringify({ userId: currentUser.id, courseId: courseToEnroll }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -1889,6 +1883,9 @@ export function PublicCoursesView() {
       }
     } catch {
       toast.error('Failed to enroll')
+    } finally {
+      setEnrolling(false)
+      setCourseToEnroll(null)
     }
   }
 
@@ -2512,7 +2509,29 @@ export function PublicCoursesView() {
       </section>
 
       {/* ═══ Footer ═══ */}
-      <CoursesFooter />
+      <PublicFooter />
+
+      <AlertDialog open={!!courseToEnroll} onOpenChange={(open) => !open && !enrolling && setCourseToEnroll(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Enrollment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to enroll in this course?
+              {courses.find(c => c.id === courseToEnroll)?.price === 0 ? ' This course is free.' : ` You will be charged $${courses.find(c => c.id === courseToEnroll)?.price}.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={enrolling} className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmEnroll(); }}
+              disabled={enrolling}
+              className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+            >
+              {enrolling ? 'Enrolling...' : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ═══ Quick Preview Dialog ═══ */}
       <QuickPreviewDialog

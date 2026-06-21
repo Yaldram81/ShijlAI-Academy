@@ -689,7 +689,11 @@ export function NotificationsPage() {
                     <Button
                       className="rounded-xl gap-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white"
                       onClick={() => {
-                        // Navigate to the action URL
+                        if (detailNotif.actionUrl && !detailNotif.actionUrl.startsWith('http')) {
+                          useAppStore.getState().setCurrentView(detailNotif.actionUrl as any)
+                        } else if (detailNotif.actionUrl) {
+                          window.open(detailNotif.actionUrl, '_blank')
+                        }
                         setDetailNotif(null)
                       }}
                     >

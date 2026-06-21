@@ -59,6 +59,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Separator } from '@/components/ui/separator'
+import { formatDistanceToNow } from 'date-fns'
+import { PublicFooter } from '@/components/layout/public-footer'
 import { toast } from 'sonner'
 import type { Module } from '@/lib/types'
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog'
@@ -753,6 +755,8 @@ export function PublicCourseDetailView() {
         enrolling={enrolling}
         onEnroll={handleEnroll}
       />
+
+      <PublicFooter />
 
       {/* ─── Mobile Sticky CTA ─────────────────────────────────────────────── */}
       <MobileStickyBar

@@ -85,8 +85,7 @@ export async function GET(request: NextRequest) {
         orderBy = { rating: 'desc' };
         break;
       case 'most_revenue':
-        // Revenue = enrollmentCount * price; sort by enrollmentCount * price approximation
-        // SQLite doesn't support computed orderBy easily, so sort by enrollmentCount as proxy
+        // Sort by enrollmentCount as proxy for approximate popular/revenue sort
         orderBy = { enrollmentCount: 'desc' };
         break;
       case 'title_asc':

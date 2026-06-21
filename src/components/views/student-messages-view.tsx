@@ -293,6 +293,8 @@ export function StudentMessagesView() {
             studentId,
             conversationId: activeConvId,
             content: type === 'image' ? `📷 ${file.name}` : `📎 ${file.name}`,
+            type,
+            attachments: JSON.stringify({ url: base64, filename: file.name }),
           }),
         })
         if (res.ok) {

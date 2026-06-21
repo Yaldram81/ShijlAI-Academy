@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { toast } from 'sonner'
 import type {
   CourseFormData, WizardModule, WizardLesson, WizardQuiz,
@@ -1003,28 +1004,14 @@ function TextLessonEditor({
           <FileText className="size-4 text-primary" />
           Lesson Content
         </Label>
-        {/* Toolbar */}
-        <div className="flex items-center gap-1 p-1.5 rounded-t-2xl border border-b-0 bg-muted/30">
-          {['B', 'I', 'U', 'H1', 'H2', '•', '1.', '""', '—', '</>'].map((tool) => (
-            <button
-              key={tool}
-              type="button"
-              className="flex size-7 items-center justify-center rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-              onClick={() => toast.info(`${tool} formatting applied`)}
-            >
-              {tool}
-            </button>
-          ))}
-        </div>
-        <Textarea
-          value={lesson.content}
-          onChange={(e) => onLessonUpdate({ content: e.target.value })}
-          className="rounded-t-0 rounded-b-2xl text-[14px] min-h-[300px] resize-y"
-          placeholder="Write your lesson content here...&#10;&#10;Use the toolbar above for formatting, or use Markdown syntax.&#10;&#10;Tip: Break your content into sections with clear headings for better readability."
+        <RichTextEditor
+          content={lesson.content}
+          onChange={(content) => onLessonUpdate({ content })}
+          placeholder="Write your lesson content here... Tip: Break your content into sections with clear headings for better readability."
         />
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-2">
           <span className="text-[11px] text-muted-foreground">
-            {lesson.content.trim().split(/\s+/).filter(Boolean).length} words
+            {lesson.content.replace(/<[^>]*>/g, '').trim().split(/\s+/).filter(Boolean).length} words
           </span>
           <Button
             variant="ghost"
@@ -1032,7 +1019,7 @@ function TextLessonEditor({
             className="rounded-xl h-6 text-[10px] gap-1 text-primary"
             onClick={() => {
               onLessonUpdate({
-                content: lesson.content + '\n\n## Key Takeaways\n\n1. \n2. \n3. \n\n---\n\n**Next:** Continue to the next lesson →'
+                content: lesson.content + '<p></p><h2>Key Takeaways</h2><ol><li><p></p></li><li><p></p></li><li><p></p></li></ol><hr><p><strong>Next:</strong> Continue to the next lesson →</p>'
               })
             }}
           >

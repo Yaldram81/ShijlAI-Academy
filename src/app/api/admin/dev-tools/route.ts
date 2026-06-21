@@ -1203,49 +1203,50 @@ async function handleTestEndpoint(body: {
 
 async function handleOptimizeDb() {
   const results: { operation: string; status: string; details: string }[] = [];
+  const tables = '`User`, `Course`, `Enrollment`, `Lesson`, `Module`, `Quiz`, `Assignment`, `Transaction`, `Notification`, `ActivityLog`';
 
-  // 1. VACUUM (SQLite)
+  // 1. OPTIMIZE TABLE (MySQL)
   try {
-    const vacuumStart = Date.now();
-    await db.$executeRawUnsafe('VACUUM');
-    const vacuumTime = Date.now() - vacuumStart;
+    const optimizeStart = Date.now();
+    await db.$executeRawUnsafe(`OPTIMIZE TABLE ${tables}`);
+    const optimizeTime = Date.now() - optimizeStart;
     results.push({
-      operation: 'VACUUM',
+      operation: 'OPTIMIZE TABLE',
       status: 'success',
-      details: `Completed in ${vacuumTime}ms — reclaimed unused space`,
+      details: `Completed in ${optimizeTime}ms — defragmented and reclaimed unused space`,
     });
   } catch (err) {
     results.push({
-      operation: 'VACUUM',
+      operation: 'OPTIMIZE TABLE',
       status: 'error',
-      details: err instanceof Error ? err.message : 'VACUUM failed',
+      details: err instanceof Error ? err.message : 'OPTIMIZE TABLE failed',
     });
   }
 
-  // 2. ANALYZE (SQLite)
+  // 2. ANALYZE TABLE (MySQL)
   try {
     const analyzeStart = Date.now();
-    await db.$executeRawUnsafe('ANALYZE');
+    await db.$executeRawUnsafe(`ANALYZE TABLE ${tables}`);
     const analyzeTime = Date.now() - analyzeStart;
     results.push({
-      operation: 'ANALYZE',
+      operation: 'ANALYZE TABLE',
       status: 'success',
-      details: `Completed in ${analyzeTime}ms — updated query planner statistics`,
+      details: `Completed in ${analyzeTime}ms — updated table optimizer statistics`,
     });
   } catch (err) {
     results.push({
-      operation: 'ANALYZE',
+      operation: 'ANALYZE TABLE',
       status: 'error',
-      details: err instanceof Error ? err.message : 'ANALYZE failed',
+      details: err instanceof Error ? err.message : 'ANALYZE TABLE failed',
     });
   }
 
-  // 3. Integrity check
+  // 3. CHECK TABLE (MySQL)
   try {
     const integrityStart = Date.now();
-    const integrityResult = await db.$queryRawUnsafe('PRAGMA integrity_check') as Array<{ integrity_check: string }>;
+    const integrityResult = await db.$queryRawUnsafe(`CHECK TABLE ${tables}`) as Array<{ Msg_text: string }>;
     const integrityTime = Date.now() - integrityStart;
-    const isOk = integrityResult[0]?.integrity_check === 'ok';
+    const isOk = integrityResult.every(row => row.Msg_text === 'OK' || row.Msg_text === 'Table is already up to date');
     results.push({
       operation: 'Integrity Check',
       status: isOk ? 'success' : 'error',

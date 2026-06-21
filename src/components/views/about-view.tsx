@@ -24,6 +24,7 @@ import {
   Send, MessageSquare, Building2, Handshake,
   BadgeCheck, Landmark, University, GraduationCapIcon
 } from 'lucide-react'
+import { PublicFooter } from '@/components/layout/public-footer'
 
 const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 }
 
@@ -800,42 +801,6 @@ function CTASection() {
   )
 }
 
-// Footer
-function AboutFooter() {
-  const { setCurrentView } = useAppStore()
-
-  return (
-    <footer className="border-t bg-muted/30 py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShijlAILogo size="xs" className="shrink-0" />
-            <span className="text-[14px] font-semibold"><ShijlAIBrand variant="compact" /></span>
-          </div>
-          <div className="flex items-center gap-6">
-            {[
-              { label: 'Privacy', view: 'landing' as const },
-              { label: 'Terms', view: 'landing' as const },
-              { label: 'Contact', view: 'about' as const },
-            ].map((link) => (
-              <button
-                key={link.label}
-                onClick={() => setCurrentView(link.view)}
-                className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[12px] text-muted-foreground">
-            2025 <ShijlAIBrand variant="compact" />. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 export function AboutView() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -851,7 +816,7 @@ export function AboutView() {
         <FAQSection />
         <CTASection />
       </div>
-      <AboutFooter />
+      <PublicFooter />
     </div>
   )
 }

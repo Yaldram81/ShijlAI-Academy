@@ -20,6 +20,7 @@ export type View =
   | 'instructors'
   | 'application-status'
   | 'about'
+  | 'contact'
   | 'blog'
   | 'blog-detail'
   | 'login'

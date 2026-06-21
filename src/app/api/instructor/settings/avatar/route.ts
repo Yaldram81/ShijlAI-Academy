@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, avatar: user.avatar })
   } catch (error) {
     console.error('Error uploading avatar:', error)
-    return NextResponse.json({ error: 'Failed to upload avatar' }, { status: 500 })
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to upload avatar' }, { status: 500 })
   }
 }
 

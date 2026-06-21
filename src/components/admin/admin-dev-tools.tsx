@@ -276,15 +276,15 @@ function generateMockDatabaseInfo(): DatabaseInfo {
       { name: 'FeatureFlag', rows: 8, size: '0.01 MB' },
       { name: 'Session', rows: 234, size: '0.1 MB' },
     ],
-    version: '3.44.2',
+    version: '8.0.36',
     fileSize: '38.9 MB',
     totalRows: 190306,
     recentQueries: [
-      { query: 'SELECT * FROM "User" WHERE role = $1 LIMIT 50', time: new Date(Date.now() - 30000).toISOString(), duration: 12 },
-      { query: 'SELECT COUNT(*) FROM "Enrollment" WHERE "createdAt" > $1', time: new Date(Date.now() - 60000).toISOString(), duration: 8 },
-      { query: 'UPDATE "FeatureFlag" SET enabled = $1 WHERE id = $2', time: new Date(Date.now() - 120000).toISOString(), duration: 3 },
-      { query: 'SELECT * FROM "Course" ORDER BY "enrollmentCount" DESC LIMIT 10', time: new Date(Date.now() - 180000).toISOString(), duration: 15 },
-      { query: 'INSERT INTO "ActivityLog" (type, title, ...) VALUES (...)', time: new Date(Date.now() - 240000).toISOString(), duration: 5 },
+      { query: 'SELECT * FROM User WHERE role = ? LIMIT 50', time: new Date(Date.now() - 30000).toISOString(), duration: 12 },
+      { query: 'SELECT COUNT(*) FROM Enrollment WHERE createdAt > ?', time: new Date(Date.now() - 60000).toISOString(), duration: 8 },
+      { query: 'UPDATE FeatureFlag SET enabled = ? WHERE id = ?', time: new Date(Date.now() - 120000).toISOString(), duration: 3 },
+      { query: 'SELECT * FROM Course ORDER BY enrollmentCount DESC LIMIT 10', time: new Date(Date.now() - 180000).toISOString(), duration: 15 },
+      { query: 'INSERT INTO ActivityLog (type, title, ...) VALUES (...)', time: new Date(Date.now() - 240000).toISOString(), duration: 5 },
     ],
   }
 }
@@ -1590,7 +1590,7 @@ export function AdminDevTools() {
                   <Database className="size-5 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div>
-                  <p className="text-[12px] text-muted-foreground">SQLite Version</p>
+                  <p className="text-[12px] text-muted-foreground">MySQL Version</p>
                   <p className="text-[16px] font-bold">{databaseInfo.version}</p>
                 </div>
               </div>

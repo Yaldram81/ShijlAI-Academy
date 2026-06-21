@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    // Build byTool breakdown from recent activity (simple approach for SQLite)
+    // Build byTool breakdown from generations
     const allGenerations = await db.aIGeneration.findMany({
       where: { instructorId },
       select: { toolType: true },

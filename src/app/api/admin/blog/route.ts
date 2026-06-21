@@ -77,7 +77,7 @@ export async function GET(request: Request) {
       db.blogPost.count({ where }),
     ])
 
-    // Get stats - use simple counts for SQLite compatibility
+    // Get stats using counts
     const [
       totalPosts,
       publishedCount,
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
       db.blogPost.count({ where: { featured: true } }),
     ])
 
-    // Get total views and likes by summing manually (SQLite aggregate compatibility)
+    // Get total views and likes by summing manually
     const allPosts = await db.blogPost.findMany({ select: { viewCount: true, likeCount: true } })
     const totalViews = allPosts.reduce((sum, p) => sum + (p.viewCount || 0), 0)
     const totalLikes = allPosts.reduce((sum, p) => sum + (p.likeCount || 0), 0)

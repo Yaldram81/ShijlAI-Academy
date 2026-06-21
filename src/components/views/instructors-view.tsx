@@ -1624,56 +1624,6 @@ function FAQSection() {
   )
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
-function InstructorsFooter() {
-  const { setCurrentView } = useAppStore()
-
-  return (
-    <footer className="border-t bg-muted/30 py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShijlAILogo size="xs" className="shrink-0" />
-            <span className="text-[14px] font-semibold"><ShijlAIBrand variant="compact" /></span>
-          </div>
-          <div className="flex items-center gap-6">
-            {[
-              { label: 'Privacy', view: 'landing' as const },
-              { label: 'Terms', view: 'landing' as const },
-              { label: 'Contact', view: 'about' as const },
-              { label: 'Blog', view: 'blog' as const },
-            ].map((link) => (
-              <button
-                key={link.label}
-                onClick={() => setCurrentView(link.view)}
-                className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            {[Twitter, Linkedin, Youtube, Github].map((Icon, i) => (
-              <button
-                key={i}
-                className="flex size-8 items-center justify-center rounded-full bg-accent/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                aria-label="Social link"
-              >
-                <Icon className="size-3.5" />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mt-4 text-center">
-          <p className="text-[12px] text-muted-foreground">
-            2025 <ShijlAIBrand variant="compact" />. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export function InstructorsView() {
   return (
@@ -1689,7 +1639,7 @@ export function InstructorsView() {
         <ApplyForm />
         <FAQSection />
       </div>
-      <InstructorsFooter />
+      <PublicFooter />
     </div>
   )
 }

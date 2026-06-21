@@ -979,7 +979,7 @@ export function StudentDashboard() {
                     <Button
                       size="sm"
                       className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-[12px] h-8 mt-1"
-                      onClick={(e) => { e.stopPropagation(); setCurrentView('courses') }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedCourseId(course.id); setCurrentView('course-detail') }}
                     >
                       <Play className="size-3 mr-1" />
                       {course.price === 0 ? 'Start Learning' : 'Enroll'}
@@ -1486,7 +1486,10 @@ export function StudentDashboard() {
                     transition={{ ...springTransition, delay: 0.35 + i * 0.06 }}
                     className="group rounded-2xl border border-border/40 bg-card p-4 hover:border-border/60 hover:shadow-sm transition-all cursor-pointer"
                     onClick={() => {
-                      if (rec.recommendedCourseId) setCurrentView('courses')
+                      if (rec.recommendedCourseId) {
+                        setSelectedCourseId(rec.recommendedCourseId)
+                        setCurrentView('course-detail')
+                      }
                       else if (rec.type === 'quiz' || rec.type === 'study_plan') setCurrentView('tutor')
                       else setCurrentView('recommendations')
                     }}

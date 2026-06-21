@@ -1026,10 +1026,7 @@ export function StudentHeader() {
                             setSelectedCourseId(n.courseId)
                             setCurrentView('course-player')
                           } else if (n.link && !n.link.startsWith('http')) {
-                            // If it's a valid view string, try routing, else ignore
-                            if (['notifications', 'student-profile', 'student-schedule'].includes(n.link)) {
-                              setCurrentView(n.link as any)
-                            }
+                            setCurrentView(n.link as any)
                           }
                         }}
                       >

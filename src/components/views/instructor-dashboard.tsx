@@ -55,6 +55,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Legend,
 } from 'recharts'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import Papa from 'papaparse'
 import { toast } from 'sonner'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1079,6 +1082,25 @@ export function InstructorDashboard() {
     }
   }
 
+  const handleExportPDF = async () => {
+    const element = document.getElementById('instructor-dashboard-content')
+    if (!element) return
+    try {
+      toast.loading('Generating PDF report...', { id: 'pdf-export' })
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`Instructor_Analytics_${period}.pdf`)
+      toast.success('PDF report downloaded', { id: 'pdf-export' })
+    } catch (err) {
+      console.error('PDF Export failed', err)
+      toast.error('Failed to generate PDF', { id: 'pdf-export' })
+    }
+  }
+
   // ─── Quick action handlers ──────────────────────────────────────────────
   const handleGradeSubmit = async () => {
     if (!gradeDialog.submissionId || !gradeScore) return
@@ -1267,7 +1289,7 @@ export function InstructorDashboard() {
 
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4" id="instructor-dashboard-content">
 
       {/* ═══════════════════════════════════════════════════════════════════
           1. GRADIENT WELCOME BANNER WITH PERIOD SELECTOR + LAST UPDATED
@@ -1319,6 +1341,14 @@ export function InstructorDashboard() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              className="gap-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 shadow-lg shadow-black/10"
+              size="sm"
+              onClick={handleExportPDF}
+            >
+              <Download className="size-4" />
+              Export PDF
+            </Button>
             <Button
               className="gap-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-0 shadow-lg shadow-black/10"
               size="sm"
@@ -1821,6 +1851,12 @@ export function InstructorDashboard() {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCourseAction(course.courseId, 'duplicate') }}>
                             <Copy className="size-3.5 mr-2" /> Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExportCSV('students')}>
+                            Export Students (CSV)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleExportPDF}>
+                            Export Report (PDF)
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

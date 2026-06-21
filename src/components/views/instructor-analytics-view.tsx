@@ -758,6 +758,65 @@ export function InstructorAnalyticsView() {
     fetchIntelligentData()
   }, [fetchIntelligentData])
 
+  // ─── Export Data ────────────────────────────────────────────────────────
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      // Create CSV content for raw data export
+      const csvRows = [
+        ['Metric', 'Value'],
+        ['Total Students', data?.overview.totalStudents || 0],
+        ['Total Revenue ($)', data?.overview.totalRevenue || 0],
+        ['Average Rating', data?.overview.avgRating || 0],
+        ['Completion Rate (%)', data?.overview.completionRate || 0],
+        ['Total Courses', data?.overview.totalCourses || 0],
+        ['Published Courses', data?.overview.publishedCourses || 0]
+      ]
+      
+      const csvContent = csvRows.map(e => e.join(",")).join("\n")
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `instructor-analytics-${period}-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Load jspdf and html2canvas dynamically for PDF export
+      const { jsPDF } = await import('jspdf')
+      const html2canvas = (await import('html2canvas')).default
+      
+      const element = document.getElementById('analytics-dashboard')
+      if (element) {
+        toast.info('Generating PDF report...')
+        // Hide UI elements we don't want in the PDF
+        const exportBtn = document.getElementById('export-btn')
+        if (exportBtn) exportBtn.style.display = 'none'
+          
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true })
+        
+        if (exportBtn) exportBtn.style.display = 'flex'
+
+        const imgData = canvas.toDataURL('image/png')
+        const pdf = new jsPDF('p', 'mm', 'a4')
+        const pdfWidth = pdf.internal.pageSize.getWidth()
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+        pdf.save(`analytics-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      }
+      
+      toast.success('Reports exported successfully')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to export reports')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Auto-refresh every 60s
   useEffect(() => {
     if (autoRefreshRef.current) clearInterval(autoRefreshRef.current)
@@ -907,28 +966,6 @@ export function InstructorAnalyticsView() {
     }
   }
 
-  const handleExport = async () => {
-    if (!data) return
-    setExporting(true)
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800))
-      const csvRows = [
-        ['Course', 'Category', 'Students', 'Completion', 'Avg Score', 'Revenue (USD)', 'Rating'].join(','),
-        ...sortedCourses.map(c =>
-          [`"${c.title}"`, c.category, c.enrollmentCount, `${c.completionRate}%`, c.avgScore, c.revenue, c.rating].join(',')
-        ),
-      ]
-      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `analytics-report-${period}-${new Date().toISOString().split('T')[0]}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-    } finally {
-      setExporting(false)
-    }
-  }
 
   const toggleDropoffCourse = (courseId: string) => {
     setExpandedDropoffCourses(prev => {
@@ -991,7 +1028,7 @@ export function InstructorAnalyticsView() {
   // ═══════════════════════════════════════════════════════════════════════
 
   return (
-    <div className="space-y-6 pb-4">
+    <div id="analytics-dashboard" className="space-y-6 pb-4">
 
       {/* ═══════════════════════════════════════════════════════════════════
           1. HEADER SECTION
@@ -1058,6 +1095,7 @@ export function InstructorAnalyticsView() {
 
                 {/* Export Report button */}
                 <Button
+                  id="export-btn"
                   variant="outline"
                   size="sm"
                   className="gap-1.5 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30 ios-press"

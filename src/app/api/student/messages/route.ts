@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'send') {
-      const { conversationId, content } = body
+      const { conversationId, content, type = 'text', attachments } = body
       if (!conversationId || !content) {
         return NextResponse.json({ error: 'Conversation ID and content are required' }, { status: 400 })
       }
@@ -180,7 +180,8 @@ export async function POST(request: NextRequest) {
           conversationId,
           senderId: studentId,
           content,
-          type: 'text',
+          type,
+          attachments: attachments || null,
           isRead: false,
         },
       })

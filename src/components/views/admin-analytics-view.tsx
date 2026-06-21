@@ -17,6 +17,9 @@ import {
   AreaChart, BarChart, PieChart, ComposedChart, Area, Bar, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line
 } from 'recharts'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import Papa from 'papaparse'
 
 type TabType = 'ai-insights' | 'statistics'
 
@@ -129,6 +132,38 @@ export function AdminAnalyticsView() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  const handleExportPDF = async () => {
+    const element = document.getElementById('analytics-dashboard')
+    if (!element) return
+    try {
+      setLoading(true)
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save('Admin_Analytics_Report.pdf')
+    } catch (err) {
+      console.error('PDF Export failed', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!intelligentData || !dashboardData) return
+    const csvContent = Papa.unparse(dashboardData.enrollmentTrends || [])
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'Enrollment_Trends.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // ─── Loading State ────────────────────────────────────────────
   if (loading) {
     return (
@@ -194,7 +229,7 @@ export function AdminAnalyticsView() {
     .map((r: any) => ({ name: r.source, value: r.amount }))
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4" id="analytics-dashboard">
       {/* ═══ Header ══════════════════════════════════════════════════ */}
       <motion.div {...fadeInUp} className="relative rounded-2xl overflow-hidden shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 opacity-10" />
@@ -211,9 +246,17 @@ export function AdminAnalyticsView() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30" onClick={fetchData}>
-              <RefreshCw className="size-3.5" /> Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-full" onClick={handleExportCSV}>
+                CSV Export
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-full" onClick={handleExportPDF}>
+                PDF Report
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30" onClick={fetchData}>
+                <RefreshCw className="size-3.5" /> Refresh
+              </Button>
+            </div>
           </div>
         </div>
       </motion.div>

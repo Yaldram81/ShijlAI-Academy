@@ -1,18 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Sparkles, Send, X, ChevronLeft, ChevronRight, Layers,
+  Sparkles, Send, X, Layers,
   FileText, HelpCircle, Image, Search, ClipboardList,
-  Bot, MessageSquare, Zap, Lightbulb, Loader2,
+  Bot, Zap, Lightbulb, Loader2, User, RotateCcw
 } from 'lucide-react'
 import { ShijlAIText } from '@/components/ui/brand-text'
+import { AiMessageRenderer } from '@/components/ai/ai-message-renderer'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import type { AIMessage } from './types'
@@ -32,12 +29,12 @@ export interface AIPanelProps {
 // ─── Quick Actions Config ───
 
 const QUICK_ACTIONS = [
-  { id: 'generate-curriculum', label: 'Generate curriculum', icon: Layers, color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400' },
-  { id: 'write-description', label: 'Write description', icon: FileText, color: 'bg-teal-100 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400' },
-  { id: 'create-quiz', label: 'Create quiz from video', icon: HelpCircle, color: 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' },
-  { id: 'suggest-thumbnail', label: 'Suggest thumbnail', icon: Image, color: 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400' },
-  { id: 'optimize-seo', label: 'Optimize SEO title', icon: Search, color: 'bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400' },
-  { id: 'generate-rubric', label: 'Generate rubric', icon: ClipboardList, color: 'bg-sky-100 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400' },
+  { id: 'generate-curriculum', label: 'Generate curriculum', icon: Layers, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'write-description', label: 'Write description', icon: FileText, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'create-quiz', label: 'Create quiz', icon: HelpCircle, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'suggest-thumbnail', label: 'Suggest thumbnail', icon: Image, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'optimize-seo', label: 'Optimize SEO', icon: Search, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'generate-rubric', label: 'Generate rubric', icon: ClipboardList, color: 'text-emerald-600 dark:text-emerald-400' },
 ]
 
 // ─── Context Suggestions per Step ───
@@ -77,7 +74,37 @@ const STEP_SUGGESTIONS: Record<number, string[]> = {
 
 // ─── Panel Width ───
 
-const PANEL_WIDTH = 340
+const PANEL_WIDTH = 380
+
+function TypingIndicator() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="flex gap-3 px-1 py-2"
+    >
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white mt-0.5">
+        <Bot className="size-3.5" />
+      </div>
+      <div className="flex items-center gap-1.5 pt-2">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="size-1.5 rounded-full bg-foreground/40"
+            animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              delay: i * 0.15,
+              ease: 'easeInOut',
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  )
+}
 
 // ─── Main Component ───
 
@@ -92,14 +119,20 @@ export function AIPanel({
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
     }
-  }, [messages])
+  }, [])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isSending, scrollToBottom])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -110,7 +143,6 @@ export function AIPanel({
 
   // Contextual suggestions based on current step
   const suggestions = useMemo(() => STEP_SUGGESTIONS[currentStep] || STEP_SUGGESTIONS[0], [currentStep])
-
   const currentStepInfo = useMemo(() => STEPS[currentStep] || STEPS[0], [currentStep])
 
   const handleSend = () => {
@@ -122,12 +154,28 @@ export function AIPanel({
     setTimeout(() => setIsSending(false), 800)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   const handleQuickAction = (actionId: string) => {
     onQuickAction(actionId)
     toast.success('AI action started!', {
       description: QUICK_ACTIONS.find(a => a.id === actionId)?.label,
     })
   }
+
+  const regenerateResponse = () => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+    if (lastUserMsg) {
+      onSendMessage(`Please regenerate your previous response regarding: ${lastUserMsg.content}`)
+    }
+  }
+
+  const showWelcome = messages.length === 0
 
   return (
     <>
@@ -140,7 +188,7 @@ export function AIPanel({
             exit={{ opacity: 0, scale: 0.8 }}
             transition={SPRING}
             onClick={onToggle}
-            className="fixed right-4 bottom-6 z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white ios-shadow-lg hover:from-emerald-700 hover:to-teal-700 transition-all ios-press"
+            className="fixed right-4 bottom-6 z-50 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white ios-shadow-lg hover:from-emerald-600 hover:to-teal-700 transition-all ios-press"
             aria-label="Open AI Assistant"
           >
             <Sparkles className="size-6" />
@@ -156,20 +204,22 @@ export function AIPanel({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: PANEL_WIDTH + 20, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed right-0 top-0 bottom-0 z-50 flex flex-col ios-glass-thick border-l border-border/50"
+            className="fixed right-0 top-0 bottom-0 z-50 flex flex-col ios-glass-thick border-l border-border/50 bg-background shadow-2xl"
             style={{ width: PANEL_WIDTH }}
           >
             {/* ─── Header ─── */}
-            <div className="flex items-center justify-between p-4 border-b border-border/50">
+            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-background/80 backdrop-blur-sm">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
                   <Bot className="size-5" />
                 </div>
                 <div>
                   <h3 className="text-[14px] font-bold flex items-center gap-1">
                     ✦ <ShijlAIText /> Assistant
                   </h3>
-                  <p className="text-[11px] text-muted-foreground">Your AI course co-creator</p>
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    Course Co-creator
+                  </p>
                 </div>
               </div>
               <button
@@ -182,165 +232,221 @@ export function AIPanel({
             </div>
 
             {/* ─── Current Step Context ─── */}
-            <div className="px-4 py-2.5 bg-muted/30 border-b border-border/30">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] h-5 rounded-lg bg-primary/5 text-primary border-primary/20">
-                  Step {currentStep + 1}
-                </Badge>
-                <span className="text-[11px] font-medium text-muted-foreground truncate">
-                  {currentStepInfo.title}
-                </span>
+            <div className="px-4 py-2 bg-emerald-500/5 border-b border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] h-5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                    Step {currentStep + 1}
+                  </Badge>
+                  <span className="text-[11px] font-medium text-muted-foreground truncate">
+                    {currentStepInfo.title}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* ─── Scrollable Content ─── */}
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-5">
-                {/* ─── Quick Actions ─── */}
-                <div className="space-y-2.5">
-                  <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Zap className="size-3" />
-                    Quick Actions
-                  </h4>
-                  <div className="space-y-1.5">
-                    {QUICK_ACTIONS.map((action) => (
-                      <motion.button
-                        key={action.id}
-                        type="button"
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleQuickAction(action.id)}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+              {showWelcome ? (
+                <div className="flex flex-col h-full px-5 py-8">
+                  {/* AI Logo & Greeting */}
+                  <div className="flex flex-col items-center text-center mb-8">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg mb-4"
+                    >
+                      <Bot className="size-7" />
+                    </motion.div>
+                    <motion.h2
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="text-lg font-bold text-foreground mb-1.5"
+                    >
+                      Course Co-creator
+                    </motion.h2>
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="text-muted-foreground text-[13px]"
+                    >
+                      I can help you build your course faster. Let's get started!
+                    </motion.p>
+                  </div>
+
+                  {/* Contextual Suggestions */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-2 mb-6"
+                  >
+                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 ml-1 mb-2">
+                      <Lightbulb className="size-3" />
+                      Suggestions for this step
+                    </h4>
+                    {suggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setInput(suggestion)
+                          inputRef.current?.focus()
+                        }}
+                        className="w-full text-left rounded-xl p-3 bg-emerald-500/5 border border-emerald-500/10 text-[12px] text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors ios-press"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </motion.div>
+
+                  {/* Quick Actions Grid */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="space-y-2 mt-auto"
+                  >
+                    <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 ml-1 mb-2">
+                      <Zap className="size-3" />
+                      Quick Tools
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {QUICK_ACTIONS.map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => handleQuickAction(action.id)}
+                          className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border/50 bg-card p-3 text-center transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30 ios-press"
+                        >
+                          <action.icon className={cn("size-4 opacity-80", action.color)} />
+                          <span className="text-[11px] font-medium leading-tight">{action.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className="p-4 space-y-4">
+                  {/* Chat Messages */}
+                  {messages.map((msg) => {
+                    const isUser = msg.role === 'user'
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         className={cn(
-                          'w-full flex items-center gap-2.5 rounded-xl p-2.5 text-left transition-all',
-                          'hover:bg-muted/50 ios-press border border-transparent hover:border-border'
+                          'flex gap-3',
+                          isUser ? 'justify-end' : 'justify-start'
                         )}
                       >
-                        <div className={cn('flex size-7 items-center justify-center rounded-lg shrink-0', action.color)}>
-                          <action.icon className="size-3.5" />
-                        </div>
-                        <span className="text-[12px] font-medium">{action.label}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* ─── AI Suggestions ─── */}
-                <div className="space-y-2.5">
-                  <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Lightbulb className="size-3" />
-                    Suggestions
-                  </h4>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentStep}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={SPRING}
-                      className="space-y-2"
-                    >
-                      {suggestions.map((suggestion, idx) => (
-                        <motion.button
-                          key={idx}
-                          type="button"
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.08, ...SPRING }}
-                          onClick={() => {
-                            setInput(suggestion)
-                            inputRef.current?.focus()
-                          }}
-                          className="w-full text-left rounded-xl p-2.5 bg-primary/5 border border-primary/10 text-[12px] text-primary hover:bg-primary/10 transition-colors ios-press"
-                        >
-                          {suggestion}
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-
-                {/* ─── Chat Messages ─── */}
-                {messages.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2.5">
-                      <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <MessageSquare className="size-3" />
-                        Conversation
-                      </h4>
-                      <div ref={scrollRef} className="space-y-2 max-h-64 overflow-y-auto">
-                        {messages.map((msg) => (
-                          <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={SPRING}
-                            className={cn(
-                              'rounded-2xl p-2.5 text-[12px] leading-relaxed',
-                              msg.role === 'user'
-                                ? 'bg-primary text-primary-foreground ml-6'
-                                : 'bg-muted mr-6'
-                            )}
-                          >
-                            {msg.content}
-                          </motion.div>
-                        ))}
-                        {isSending && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex items-center gap-2 text-[12px] text-muted-foreground ml-2"
-                          >
-                            <Loader2 className="size-3 animate-spin" />
-                            Thinking...
-                          </motion.div>
+                        {/* AI Avatar */}
+                        {!isUser && (
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white mt-0.5">
+                            <Bot className="size-3.5" />
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  </>
-                )}
 
-                {/* ─── Empty State ─── */}
-                {messages.length === 0 && (
-                  <div className="text-center py-4">
-                    <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 mx-auto mb-2">
-                      <Sparkles className="size-6 text-primary" />
-                    </div>
-                    <p className="text-[13px] font-medium text-foreground">How can I help?</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Ask me anything about creating your course
-                    </p>
+                        {/* Message Content */}
+                        <div className={cn('max-w-[85%] min-w-0', isUser ? 'order-first' : '')}>
+                          {isUser ? (
+                            <div className="rounded-2xl rounded-br-md text-white px-3.5 py-2 shadow-sm bg-emerald-600 dark:bg-emerald-700">
+                              <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl rounded-bl-md bg-muted/40 border border-border/40 px-3.5 py-2">
+                              <AiMessageRenderer content={msg.content} mode="tutor" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Avatar */}
+                        {isUser && (
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white mt-0.5">
+                            <User className="size-3.5" />
+                          </div>
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                  
+                  {isSending && <TypingIndicator />}
+                  
+                  <div className="h-2" />
+                </div>
+              )}
+            </div>
+
+            {/* ─── Inline Quick Actions (when chatting) ─── */}
+            <AnimatePresence>
+              {!showWelcome && messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && !isSending && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="border-t border-border/20 px-3 py-2 bg-muted/10"
+                >
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                    {QUICK_ACTIONS.slice(0, 3).map((action) => (
+                      <button
+                        key={action.id}
+                        onClick={() => handleQuickAction(action.id)}
+                        className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/50 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/30"
+                      >
+                        <action.icon className="size-3" />
+                        {action.label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={regenerateResponse}
+                      className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/50 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:bg-muted"
+                    >
+                      <RotateCcw className="size-3" />
+                      Regenerate
+                    </button>
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* ─── Chat Input ─── */}
-            <div className="p-3 border-t border-border/50 bg-background/80">
-              <div className="flex items-center gap-2">
-                <Input
+            <div className="p-3 border-t border-border/30 bg-background">
+              <div className={cn(
+                'relative flex items-end rounded-2xl border bg-card shadow-sm transition-all',
+                'border-border/50 focus-within:border-emerald-500/50 focus-within:shadow-emerald-500/5'
+              )}>
+                <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="h-10 rounded-2xl text-[13px] flex-1 bg-muted/30"
-                  placeholder="Ask the AI assistant..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSend()
-                    }
-                  }}
+                  onKeyDown={handleKeyDown}
+                  disabled={isSending}
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent px-3 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none disabled:opacity-50 max-h-24 overflow-y-auto scrollbar-thin min-h-[44px]"
+                  placeholder="Ask ShijlAI Assistant..."
                 />
-                <Button
-                  type="button"
-                  size="icon"
-                  className="rounded-2xl size-10 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white ios-press shrink-0"
-                  onClick={handleSend}
-                  disabled={!input.trim() || isSending}
-                >
-                  <Send className="size-4" />
-                </Button>
+                <div className="flex items-center pr-1.5 pb-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={!input.trim() || isSending}
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-xl transition-all',
+                      input.trim() && !isSending
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm hover:opacity-90 ios-press'
+                        : 'text-muted-foreground/30 bg-transparent'
+                    )}
+                  >
+                    {isSending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0;');
 
   // Clean existing data
   await prisma.peerReview.deleteMany();
@@ -2215,11 +2216,15 @@ async function main() {
     enrollments: 6,
     activityLogs: 15,
   });
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1;');
 }
 
 main()
-  .catch((e) => {
+  .catch(async (e) => {
     console.error('❌ Seeding failed:', e);
+    try {
+      await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1;');
+    } catch (_) {}
     process.exit(1);
   })
   .finally(async () => {

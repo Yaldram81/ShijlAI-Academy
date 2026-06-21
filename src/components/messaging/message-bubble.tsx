@@ -221,31 +221,61 @@ export function MessageBubble({
             ) : (
               <div ref={bubbleRef} className="relative">
                 <div className={cn(
-                  'rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed',
+                  'rounded-2xl px-3.5 pt-2 pb-1.5 text-[14px] leading-relaxed min-w-[120px]',
                   isOwn
                     ? cn(colors.ownBubble, 'rounded-br-md')
                     : 'bg-muted/70 text-foreground rounded-bl-md',
                   isSearchHighlight && 'ring-2 ring-amber-400/60'
                 )}>
-                  {message.content}
+                  <span className="whitespace-pre-wrap break-words">{message.content}</span>
+                  <div className={cn(
+                    'float-right flex items-center gap-1 mt-2 ml-3',
+                    isOwn ? 'text-white/70' : 'text-muted-foreground/60'
+                  )}>
+                    {isEdited && <span className="text-[10px]">(edited)</span>}
+                    <span className="text-[10px]">{message.timestamp}</span>
+                    {isOwn && (
+                      message.read
+                        ? <CheckCheck className={cn('size-3', colors.checkColor)} />
+                        : <Check className="size-3 opacity-70" />
+                    )}
+                  </div>
+                  <div className="clear-both" />
+                </div>
 
-                  {/* Edit indicator */}
-                  {isEdited && (
-                    <span className={cn(
-                      'text-[10px] ml-1',
-                      isOwn ? 'text-white/50' : 'text-muted-foreground/40'
-                    )}>(edited)</span>
+              </div>
+            )}
+
+            {/* Reactions and Action Buttons */}
+            {!isEditing && (
+              <div className="flex items-center justify-between gap-4 mt-1 px-1">
+                {/* Left: Reactions (Emoji Counter) */}
+                <div className="flex flex-wrap gap-1">
+                  {message.reactions && Object.keys(message.reactions).length > 0 && (
+                    Object.entries(message.reactions).map(([emoji, userIds]) => {
+                      if (!userIds || userIds.length === 0) return null
+                      const isMyReaction = userIds.includes(userId)
+                      return (
+                        <button
+                          key={emoji}
+                          onClick={() => onReaction(emoji)}
+                          className={cn(
+                            'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[12px] transition-all hover:scale-105',
+                            isMyReaction ? colors.reactionOwn : 'bg-muted/60'
+                          )}
+                        >
+                          <span>{emoji}</span>
+                          {userIds.length > 1 && <span className="text-[10px] text-muted-foreground">{userIds.length}</span>}
+                        </button>
+                      )
+                    })
                   )}
                 </div>
 
-                {/* Action buttons below message - like WhatsApp */}
-                <div className={cn(
-                  'flex items-center gap-0.5 mt-0.5',
-                  isOwn ? 'justify-end' : 'justify-start'
-                )}>
-                  {/* Like button */}
+                {/* Right: Action Buttons (Like, Emoji Pack) */}
+                <div className="flex items-center gap-0.5 shrink-0 ml-auto">
                   <button
-                    onClick={() => onReaction(userExistingReaction === '👍' ? '👍' : '👍')}
+                    onClick={() => onReaction('👍')}
                     className={cn(
                       'size-6 flex items-center justify-center rounded-full transition-all text-[12px]',
                       userExistingReaction === '👍'
@@ -256,7 +286,6 @@ export function MessageBubble({
                     <ThumbsUp className="size-3.5" />
                   </button>
 
-                  {/* Emoji button - opens emoji picker */}
                   <div className="relative">
                     <button
                       onClick={() => setShowLocalEmoji(!showLocalEmoji)}
@@ -270,59 +299,18 @@ export function MessageBubble({
                       <Smile className="size-3.5" />
                     </button>
 
-                    {/* Emoji popup */}
                     <AnimatePresence>
                       {showLocalEmoji && (
                         <MiniEmojiPicker
                           onSelect={(emoji) => { onReaction(emoji); setShowLocalEmoji(false) }}
                           onClose={() => setShowLocalEmoji(false)}
                           theme={theme}
-                          position={isOwn ? 'right' : 'left'}
+                          position="right"
                         />
                       )}
                     </AnimatePresence>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Reactions display */}
-            {message.reactions && Object.keys(message.reactions).length > 0 && !isEditing && (
-              <div className={cn('flex flex-wrap gap-1 -mt-0.5', isOwn ? 'justify-end' : 'justify-start')}>
-                {Object.entries(message.reactions).map(([emoji, userIds]) => {
-                  if (!userIds || userIds.length === 0) return null
-                  const isMyReaction = userIds.includes(userId)
-                  return (
-                    <button
-                      key={emoji}
-                      onClick={() => onReaction(emoji)}
-                      className={cn(
-                        'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[12px] transition-all hover:scale-105',
-                        isMyReaction
-                          ? colors.reactionOwn
-                          : 'bg-muted/60'
-                      )}
-                    >
-                      <span>{emoji}</span>
-                      {userIds.length > 1 && <span className="text-[10px] text-muted-foreground">{userIds.length}</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Timestamp + Read status */}
-            {!isEditing && (
-              <div className={cn(
-                'flex items-center gap-1 -mt-0.5',
-                isOwn ? 'justify-end mr-1' : 'justify-start ml-1'
-              )}>
-                <span className="text-[10px] text-muted-foreground/50">{message.timestamp}</span>
-                {isOwn && (
-                  message.read
-                    ? <CheckCheck className={cn('size-3', colors.checkColor)} />
-                    : <Check className="size-3 text-muted-foreground/40" />
-                )}
               </div>
             )}
           </div>

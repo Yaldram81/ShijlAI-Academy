@@ -1114,6 +1114,13 @@ export function InstructorHeader() {
                               setUnreadCount(prev => Math.max(0, prev - 1))
                             }).catch(() => {})
                           }
+                          
+                          // Route based on notification data
+                          if (n.type === 'message') {
+                            useAppStore.getState().setCurrentView('instructor-messages')
+                          } else if (n.link && !n.link.startsWith('http')) {
+                            useAppStore.getState().setCurrentView(n.link as any)
+                          }
                         }}
                       >
                         <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/60">

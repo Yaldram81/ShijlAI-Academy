@@ -24,6 +24,7 @@ const viewLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
   'instructors': () => import('@/components/views/instructors-view').then(m => ({ default: m.InstructorsView })),
   'application-status': () => import('@/components/views/application-status-view').then(m => ({ default: m.ApplicationStatusView })),
   'about': () => import('@/components/views/about-view').then(m => ({ default: m.AboutView })),
+  'contact': () => import('@/components/views/contact-view').then(m => ({ default: m.ContactView })),
   'blog': () => import('@/components/views/blog-view').then(m => ({ default: m.BlogView })),
   'blog-detail': () => import('@/components/views/blog-detail-view').then(m => ({ default: m.BlogDetailView })),
   'dashboard': () => import('@/components/views/dashboard-view').then(m => ({ default: m.DashboardView })),
@@ -141,7 +142,7 @@ const publicPageTransition = {
 }
 
 const authViews: View[] = ['login', 'register', 'forgot-password', 'verify-otp', 'reset-password']
-const publicViews: View[] = ['landing', 'public-courses', 'public-course-detail', 'pricing', 'instructors', 'about', 'blog', 'blog-detail']
+const publicViews: View[] = ['landing', 'public-courses', 'public-course-detail', 'pricing', 'instructors', 'about', 'contact', 'blog', 'blog-detail']
 
 // resolveViewKey is now imported from @/lib/view-utils
 
@@ -185,7 +186,7 @@ export default function Home() {
     } else if (view === 'application-status') {
       setCurrentView('application-status')
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Scroll to top when view changes
@@ -224,7 +225,7 @@ export default function Home() {
             <GraduationCap className="size-10" />
           </div>
           <div className="flex flex-col items-center gap-1.5">
-            <h2 className="text-[20px] font-bold text-foreground"><span style={{fontFamily:"ScriptMTBold, cursive", fontWeight:"bold"}}>Shijl</span><span style={{fontFamily:"LatinModernRoman, serif", fontWeight:"bold"}}>AI</span> Academy</h2>
+            <h2 className="text-[20px] font-bold text-foreground"><span style={{ fontFamily: "ScriptMTBold, cursive", fontWeight: "bold" }}>Shijl</span><span style={{ fontFamily: "LatinModernRoman, serif", fontWeight: "bold" }}>AI</span> Academy</h2>
             <div className="flex items-center gap-2">
               <Loader2 className="size-4 animate-spin text-primary" />
               <span className="text-[13px] text-muted-foreground">Loading...</span>
@@ -309,7 +310,7 @@ export default function Home() {
               </AnimatePresence>
               {!isFullView && (
                 <footer className="mt-8 pt-4 pb-2 text-center text-[11px] text-muted-foreground/50">
-                  <p><span style={{fontFamily:"ScriptMTBold, cursive", fontWeight:"bold"}}>Shijl</span><span style={{fontFamily:"LatinModernRoman, serif", fontWeight:"bold"}}>AI</span> Academy — Admin Panel</p>
+                  <p><span style={{ fontFamily: "ScriptMTBold, cursive", fontWeight: "bold" }}>Shijl</span><span style={{ fontFamily: "LatinModernRoman, serif", fontWeight: "bold" }}>AI</span> Academy — Admin Panel</p>
                 </footer>
               )}
             </main>

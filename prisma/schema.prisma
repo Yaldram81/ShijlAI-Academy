@@ -1,3 +1,7 @@
+// MySQL-compatible Prisma schema for ShijlAI Academy
+// To use: Set DATABASE_URL_MYSQL=mysql://user:password@localhost:3306/shijlai_academy
+// Then run: npx prisma db push --schema=prisma/schema_mysql.prisma
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -6,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,7 +18,7 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String
-  avatar        String?
+  avatar        String?   @db.LongText
   role          String   @default("student") // student, instructor, admin, parent
   bio           String?
   language      String   @default("en") // en, ur
@@ -44,7 +48,7 @@ model User {
   // Admin management fields
   status        String   @default("active") // active, suspended, banned, pending_verification
   flaggedReason String?  // reason for flagging
-  adminNotes    String?  // JSON array of {note, adminName, date}
+  adminNotes    String? @db.MediumText // JSON array of {note, adminName, date}
   lastLoginAt   DateTime? // last successful login timestamp
   lastLoginIp   String?  // last login IP address
 
@@ -194,9 +198,9 @@ model ActivityLog {
   user        User?    @relation(fields: [userId], references: [id])
   type        String   // course_published, refund_requested, post_flagged, instructor_applied, revenue_received, security_alert, payout_disputed, user_signup, enrollment_created, course_review_pending, user_suspended, user_banned, refund_issued, notification_sent, revenue_split_changed, course_rejected, content_removed, settings_updated, payout_processed, api_key_generated, role_created, ip_blocked, login_alert
   title       String
-  description String?
+  description String? @db.Text
   icon        String   @default("📋") // emoji icon
-  metadata    String?  // JSON for extra data (courseId, amount, etc.)
+  metadata    String? @db.MediumText // JSON for extra data (courseId, amount, etc.)
   createdAt   DateTime @default(now())
 
   // Audit log specific fields
@@ -232,7 +236,7 @@ model InstructorApplication {
   // interview_completed, approved, onboarded, rejected, withdrawn
 
   // Review details
-  adminNotes      String?  // JSON array of {note, adminName, adminId, date}
+  adminNotes      String? @db.MediumText // JSON array of {note, adminName, adminId, date}
   reviewedAt      DateTime?
   reviewedBy      String?  // admin user id
   rejectionReason String?
@@ -242,7 +246,7 @@ model InstructorApplication {
 
   // Scoring / evaluation
   evaluationScore Float?   // 0-100 composite score
-  evaluationCriteria String? // JSON: {expertise: 80, experience: 70, motivation: 90, ...}
+  evaluationCriteria String? @db.MediumText // JSON: {expertise: 80, experience: 70, motivation: 90, ...}
   evaluationNotes String?
 
   // Email tracking
@@ -256,11 +260,11 @@ model InstructorApplication {
   // Info request tracking
   infoRequestMessage String? // what info the admin requested
   infoProvidedAt     DateTime? // when applicant provided the info
-  infoProvidedData   String? // JSON: the additional data provided
+  infoProvidedData   String? @db.MediumText // JSON: the additional data provided
 
   // Onboarding
   onboardedAt      DateTime?
-  onboardingChecklist String? // JSON: {profileCompleted: true, firstCourseStarted: false, ...}
+  onboardingChecklist String? @db.MediumText // JSON: {profileCompleted: true, firstCourseStarted: false, ...}
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -287,7 +291,7 @@ model ApplicationTimeline {
   description     String?
   performedBy     String?  // admin user id or 'system' or 'applicant'
   performedByName String?  // display name
-  metadata        String?  // JSON for additional data
+  metadata        String? @db.MediumText // JSON for additional data
   createdAt       DateTime @default(now())
 
   @@index([applicationId])
@@ -309,7 +313,7 @@ model ApplicationInterview {
   interviewerId   String?  // admin user id
   interviewerName String?  // admin display name
   notes           String?  // pre-interview notes
-  feedback        String?  // post-interview feedback (JSON: {strengths, concerns, recommendation, score})
+  feedback        String? @db.MediumText // post-interview feedback (JSON: {strengths, concerns, recommendation, score})
   feedbackScore   Float?   // 0-100 interview score
   completedAt     DateTime?
   createdAt       DateTime @default(now())
@@ -321,20 +325,20 @@ model ApplicationInterview {
 model Course {
   id          String   @id @default(cuid())
   title       String
-  description String
+  description String @db.Text
   category    String   // e.g., "FSc", "O-Levels", "A-Levels", "AWS", "IELTS"
   level       String   @default("beginner") // beginner, intermediate, advanced
   language    String   @default("en")
   thumbnail   String?
-  price       Float    @default(0)
+  price       Decimal @db.Decimal(10,2)    @default(0)
   isPublished Boolean  @default(false)
   isArchived  Boolean  @default(false)
   enrollmentCount Int  @default(0)
   rating      Float    @default(0)
-  learningObjectives String? // JSON array of strings
-  prerequisites String? // JSON array of strings
+  learningObjectives String? @db.MediumText // JSON array of strings
+  prerequisites String? @db.MediumText // JSON array of strings
   targetAudience String? // description of target audience
-  tags        String? // JSON array of tag strings
+  tags        String? @db.MediumText // JSON array of tag strings
   estimatedDuration Int @default(0) // total hours
   certificateEnabled Boolean @default(true)
   completionThreshold Float @default(80) // % needed to complete
@@ -347,15 +351,15 @@ model Course {
   // Admin management fields
   reviewStatus    String  @default("draft") // draft, under_review, approved, rejected, changes_requested, flagged
   reviewNote      String?  // admin note sent to instructor during review
-  reviewChecklist String?  // JSON object of checklist items with pass/fail/warn status
+  reviewChecklist String? @db.MediumText // JSON object of checklist items with pass/fail/warn status
   featured        Boolean @default(false) // shows in homepage banner
   staffPick       Boolean @default(false) // marked as staff pick
-  overridePrice   Float?  // promotional override price (null = no override)
+  overridePrice   Decimal? @db.Decimal(10,2)  // promotional override price (null = no override)
   overridePriceUntil DateTime? // when the promo price expires
   ageRestriction  String  @default("none") // none, 13+, 18+
   regionRestricted Boolean @default(false) // if true, restricted to Pakistan only
   flaggedReason   String?  // reason for flagging
-  adminNotes      String?  // JSON array of {note, adminName, date}
+  adminNotes      String? @db.MediumText // JSON array of {note, adminName, date}
   submittedForReviewAt DateTime? // when instructor submitted for review
   reviewedAt      DateTime? // when admin last reviewed
   reviewedBy      String?  // admin userId who reviewed
@@ -405,11 +409,11 @@ model Course {
 model Module {
   id          String   @id @default(cuid())
   title       String
-  description String?
+  description String? @db.Text
   order       Int      @default(0)
   courseId     String
   course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  learningObjectives String? // JSON array of strings for module-level objectives
+  learningObjectives String? @db.MediumText // JSON array of strings for module-level objectives
   isPublished Boolean  @default(false) // module-level publish control
 
   lessons     Lesson[]
@@ -420,16 +424,16 @@ model Module {
 model Lesson {
   id          String   @id @default(cuid())
   title       String
-  description String?
-  content     String   // markdown content
+  description String? @db.Text
+  content     String @db.Text // markdown content
   type        String   @default("video") // video, text, interactive, quiz, assignment, live-session, download
   videoUrl    String?
   duration    Int      @default(0) // in minutes
   order       Int      @default(0)
   moduleId    String
   module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  resources   String? // JSON array of {title, url, type} for downloadable resources
-  objectives  String? // JSON array of strings - what students will learn
+  resources   String? @db.MediumText // JSON array of {title, url, type} for downloadable resources
+  objectives  String? @db.MediumText // JSON array of strings - what students will learn
   isFree      Boolean  @default(false) // free preview lesson
   isPublished Boolean  @default(true) // lesson-level publish control
   transcript  String? // video transcript text
@@ -481,7 +485,7 @@ model LessonProgress {
 model Quiz {
   id          String   @id @default(cuid())
   title       String
-  description String?
+  description String? @db.Text
   type        String   @default("practice") // practice, assessment, diagnostic, certification
   timeLimit   Int      @default(0) // in minutes, 0 = no limit
   passingScore Float   @default(70)
@@ -500,16 +504,16 @@ model Quiz {
 model Assignment {
   id          String   @id @default(cuid())
   title       String
-  description String
-  instructions String // detailed instructions (markdown)
+  description String @db.Text
+  instructions String @db.Text // detailed instructions (markdown)
   type        String   @default("written") // written, coding, project, peer-review, presentation
   moduleId    String?  // optional: belongs to a specific module
   courseId     String
   course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   maxScore    Int      @default(100)
   dueDate     DateTime?
-  rubric      String? // JSON array of {criteria, description, maxPoints}
-  resources   String? // JSON array of {title, url, type} for reference materials
+  rubric      String? @db.MediumText // JSON array of {criteria, description, maxPoints}
+  resources   String? @db.MediumText // JSON array of {title, url, type} for reference materials
   submissionType String @default("text") // text, file, url, multiple
   wordLimit   Int? // for written assignments
   isPublished Boolean  @default(true)
@@ -528,7 +532,7 @@ model Question {
   quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   text        String
   type        String   @default("mcq") // mcq, true_false, fill_blank, short_answer
-  options     String   // JSON string for MCQ options
+  options     String @db.MediumText // JSON string for MCQ options
   correctAnswer String
   explanation String?
   points      Int      @default(1)
@@ -548,7 +552,7 @@ model QuizAttempt {
   maxScore    Float    @default(0)
   percentage  Float    @default(0)
   passed      Boolean  @default(false)
-  answers     String   // JSON string of user answers
+  answers     String @db.MediumText // JSON string of user answers
   startedAt   DateTime @default(now())
   completedAt DateTime?
   xpEarned    Int      @default(0)
@@ -557,12 +561,12 @@ model QuizAttempt {
 model Badge {
   id          String   @id @default(cuid())
   name        String
-  description String
+  description String @db.Text
   icon        String   // emoji or icon name
   category    String   // learning, streak, social, achievement
   xpReward    Int      @default(0)
   coinReward  Int      @default(0)
-  requirement String   // JSON string describing unlock criteria
+  requirement String @db.MediumText // JSON string describing unlock criteria
   isActive    Boolean  @default(true) // admin toggle to enable/disable badge
 
   userBadges     UserBadge[]
@@ -616,7 +620,7 @@ model ChatMessage {
   sessionId   String?
   session     TutorSession? @relation(fields: [sessionId], references: [id])
   role        String   // user, assistant
-  content     String
+  content     String @db.Text
   context     String?  // course/lesson context
   language    String   @default("en") // en, ur
   quickAction String?  // explain_simpler, more_examples, test_me, translate
@@ -691,7 +695,7 @@ model QAAnswer {
   question    QAQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  content     String
+  content     String @db.Text
   isAiGenerated Boolean @default(false)
   isInstructorAnswer Boolean @default(false) // true if posted by instructor
   isEdited    Boolean  @default(false)
@@ -755,13 +759,13 @@ model Submission {
   assignment  Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   studentId   String
   student     User     @relation(fields: [studentId], references: [id])
-  content     String   // submission content (text, URL, or file path)
-  fileUrls    String?  // JSON array of uploaded file URLs
+  content     String @db.Text // submission content (text, URL, or file path)
+  fileUrls    String? @db.MediumText // JSON array of uploaded file URLs
   status      String   @default("submitted") // submitted, grading, graded, returned, resubmitted
   score       Float?   // final score
   feedback    String?  // instructor feedback (markdown)
-  rubricScores String? // JSON object of {criteriaId: score}
-  aiPreGrade  String?  // JSON: AI pre-grading analysis
+  rubricScores String? @db.MediumText // JSON object of {criteriaId: score}
+  aiPreGrade  String? @db.MediumText // JSON: AI pre-grading analysis
   aiFeedback  String?  // AI-generated feedback
   submittedAt DateTime @default(now())
   gradedAt    DateTime?
@@ -775,10 +779,10 @@ model Submission {
 model Transaction {
   id          String   @id @default(cuid())
   type        String   // enrollment, refund, payout, adjustment
-  amount      Float
+  amount      Decimal @db.Decimal(10,2)
   currency    String   @default("PKR")
   status      String   @default("completed") // pending, completed, failed, refunded
-  description String?
+  description String? @db.Text
   courseId    String?
   course      Course?  @relation(fields: [courseId], references: [id])
   studentId   String?  // for enrollment transactions
@@ -786,10 +790,10 @@ model Transaction {
   instructorId String?
   instructor  User?    @relation("TransactionInstructor", fields: [instructorId], references: [id])
   payoutId    String?  // linked payout if applicable
-  metadata    String?  // JSON for additional data
+  metadata    String? @db.MediumText // JSON for additional data
   paymentMethod String  @default("credit_debit_card") // credit_debit_card, jazzcash, easypaisa, bank_transfer, payoneer_stripe
-  platformFee   Float   @default(0) // 20% platform commission
-  instructorEarning Float @default(0) // 80% instructor earning
+  platformFee   Decimal @db.Decimal(10,2)   @default(0) // 20% platform commission
+  instructorEarning Decimal @db.Decimal(10,2) @default(0) // 80% instructor earning
   invoiceNumber String?  // unique invoice reference
   refundedAt    DateTime? // when refund was processed
   refundReason  String?  // reason for refund
@@ -848,8 +852,8 @@ model Payout {
   disputeReason     String?  // instructor's claim about the payout
   disputeResolution String?  // admin's resolution explanation
   disputedAt        DateTime? // when the payout was disputed
-  taxWithheld       Float    @default(0) // withholding tax deducted
-  grossEarning      Float    @default(0) // gross earning before tax
+  taxWithheld       Decimal @db.Decimal(10,2)    @default(0) // withholding tax deducted
+  grossEarning      Decimal @db.Decimal(10,2)    @default(0) // gross earning before tax
 }
 
 model Conversation {
@@ -888,11 +892,11 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   sender         User     @relation("SentMessages", fields: [senderId], references: [id])
-  content        String
+  content        String @db.Text
   type           String   @default("text") // text, image, file, system
-  attachments    String?  // JSON array of {url, name, type, size}
+  attachments    String? @db.MediumText // JSON array of {url, name, type, size}
   isRead         Boolean  @default(false)
-  readBy         String?  // JSON array of userIds who read the message
+  readBy         String? @db.MediumText // JSON array of userIds who read the message
   editedAt       DateTime?
   deletedAt      DateTime?
   createdAt      DateTime @default(now())
@@ -904,14 +908,14 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id])
   type        String   // enrollment, qa, review, assignment, message, payout, system, promotion, achievement, reminder, security, social, course_update, live_session
   title       String
-  content     String
+  content     String @db.Text
   icon        String?  // emoji or icon name
   link        String?  // navigation link
   isRead      Boolean  @default(false)
   readAt      DateTime?
   courseId    String?  // optional course context
   senderId    String?  // who triggered the notification
-  metadata    String?  // JSON for extra data
+  metadata    String? @db.MediumText // JSON for extra data
   priority    String   @default("normal") // normal, high, urgent
   category    String   @default("general") // general, academic, financial, social, system, security
   actionUrl   String?  // URL for primary action button
@@ -978,8 +982,8 @@ model InstructorProfile {
   linkedin      String?
   twitter       String?
   youtube       String?
-  expertise     String?  // JSON array of skill strings
-  languages     String?  // JSON array of {name, verified} objects
+  expertise     String? @db.MediumText // JSON array of skill strings
+  languages     String? @db.MediumText // JSON array of {name, verified} objects
   ntn           String?  // National Tax Number
   ntnVerified   Boolean  @default(false)
   // Instructor application fields
@@ -1013,7 +1017,7 @@ model InstructorSettings {
   payoutThreshold   Int      @default(2000) // minimum PKR amount
   defaultPayoutMethodId String?
   // Integration settings
-  integrations      String?  // JSON: {zoom: {connected, apiKey}, meet: {connected}, mailchimp: {connected, apiKey}, zapier: {connected, webhookUrl}, webhooks: [{url, events}]}
+  integrations      String? @db.MediumText // JSON: {zoom: {connected, apiKey}, meet: {connected}, mailchimp: {connected, apiKey}, zapier: {connected, webhookUrl}, webhooks: [{url, events}]}
 
   // Appearance & Preferences
   theme            String   @default("system") // light, dark, system
@@ -1090,7 +1094,7 @@ model LiveSession {
   maxAttendees Int?
   recordingUrl String?
   isRecurring Boolean  @default(false)
-  recurrencePattern String? // JSON: {frequency, days, endDate}
+  recurrencePattern String? @db.MediumText // JSON: {frequency, days, endDate}
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1131,7 +1135,7 @@ model Review {
   enrollmentId String  @unique
   enrollment  Enrollment @relation(fields: [enrollmentId], references: [id])
   rating      Int      // 1-5 stars
-  content     String?  // review text
+  content     String? @db.Text // review text
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1157,7 +1161,7 @@ model LessonNote {
   lesson        Lesson   @relation(fields: [lessonId], references: [id])
   enrollmentId  String
   enrollment    Enrollment @relation(fields: [enrollmentId], references: [id])
-  content       String   // note text
+  content       String @db.Text   // note text
   timestamp     Int      @default(0) // video timestamp in seconds when note was taken
   color         String   @default("default") // note color: default, yellow, green, blue, pink, purple
   createdAt     DateTime @default(now())
@@ -1246,7 +1250,7 @@ model DiscussionPost {
   userId        String
   user          User     @relation(fields: [userId], references: [id])
   title         String
-  content       String
+  content       String @db.Text
   isPinned      Boolean  @default(false)
   isLocked      Boolean  @default(false)
   upvotes       Int      @default(0)
@@ -1276,7 +1280,7 @@ model DiscussionReply {
   post        DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  content     String
+  content     String @db.Text
   upvotes     Int      @default(0)
   isEdited    Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -1363,7 +1367,7 @@ model ContentModerationSettings {
   requireEmailVerification  Boolean  @default(true)
   minimumAccountAgeDays     Int      @default(1)
   blocklistWordCount        Int      @default(0)
-  blocklistWords            String?  // JSON array of blocked words
+  blocklistWords            String? @db.MediumText // JSON array of blocked words
   updatedAt                 DateTime @updatedAt
 }
 
@@ -1377,9 +1381,9 @@ model Dispute {
   type            String   // payment_not_received, course_not_as_described, unauthorized_charge, technical_issue, other
   status          String   @default("open") // open, under_review, resolved_favor_buyer, resolved_favor_seller, escalated, cancelled
   description     String   // dispute description
-  evidence        String?  // JSON array of {type, url, description} for evidence files
+  evidence        String? @db.MediumText // JSON array of {type, url, description} for evidence files
   resolutionNote  String?  // admin resolution note
-  refundAmount    Float?   // amount to refund if applicable
+  refundAmount    Decimal? @db.Decimal(10,2)   // amount to refund if applicable
   resolvedAt      DateTime?
   resolvedBy      String?  // admin userId who resolved
   createdAt       DateTime @default(now())
@@ -1409,7 +1413,7 @@ model CommissionOverride {
   id              String   @id @default(cuid())
   instructorId    String   @unique
   instructor      User     @relation(fields: [instructorId], references: [id])
-  commissionRate  Float    // custom instructor payout rate (e.g., 85 instead of 80)
+  commissionRate  Decimal @db.Decimal(10,2)    // custom instructor payout rate (e.g., 85 instead of 80)
   reason          String?  // why this override was set
   createdBy       String?  // admin userId who set it
   createdAt       DateTime @default(now())
@@ -1423,11 +1427,11 @@ model NotificationTemplate {
   name        String   @unique // e.g., "welcome_email", "enrollment_confirmation"
   title       String   // template title shown in admin
   subject     String   // email subject line (for email templates)
-  body        String   // template body with {{variables}}
+  body        String @db.Text // template body with {{variables}}
   type        String   @default("both") // in_app, email, push, sms, all, both
   category    String   @default("system") // system, enrollment, assignment, promotion, payout, reminder
   isActive    Boolean  @default(true)
-  variables   String?  // JSON array of variable names e.g., ["userName", "courseName", "amount"]
+  variables   String? @db.MediumText // JSON array of variable names e.g., ["userName", "courseName", "amount"]
   icon        String?  // emoji or icon name for in-app display
   link        String?  // default link template e.g., "/courses/{{courseId}}"
   createdAt   DateTime @default(now())
@@ -1440,7 +1444,7 @@ model NotificationLog {
   message         String   // notification message body sent
   type            String   // in_app, email, push, sms, all
   targetAudience  String   // all_users, all_students, all_instructors, specific_user, segment, course_enrollees
-  targetDetails   String?  // JSON: {userId, segmentName, courseId, etc.}
+  targetDetails   String? @db.MediumText // JSON: {userId, segmentName, courseId, etc.}
   priority        String   @default("normal") // normal, high
   link            String?  // URL link included
   sentCount       Int      @default(0) // how many users received it
@@ -1599,8 +1603,8 @@ model AIConfiguration {
   tutorContextWindow  Int      @default(20) // last N messages
   tutorMaxTokens      Int      @default(800)
   tutorSafetyLevel    String   @default("strict") // strict, moderate, off
-  tutorBlockedTopics  String   @default("[]") // JSON array of blocked terms
-  tutorSystemPrompt   String   @default("You are ShijlAI Tutor, a helpful and patient AI learning assistant for students in Pakistan. Guide students using the Socratic method — ask probing questions, give hints, and help them discover answers themselves. Be encouraging and supportive. Use examples relevant to Pakistani curriculum (FSc, O-Levels, A-Levels). Respond in the same language the student uses.")
+  tutorBlockedTopics  String   @default("[]") @db.VarChar(2000) // JSON array of blocked terms
+  tutorSystemPrompt   String    @default("You are ShijlAI Tutor, a helpful and patient AI learning assistant for students in Pakistan. Guide students using the Socratic method — ask probing questions, give hints, and help them discover answers themselves. Be encouraging and supportive. Use examples relevant to Pakistani curriculum (FSc, O-Levels, A-Levels). Respond in the same language the student uses.") @db.VarChar(2000)
   
   // ── Content Generation Settings ──
   quizGeneratorEnabled      Boolean @default(true)
@@ -1628,7 +1632,7 @@ model AIConfiguration {
   coldStartStrategy      String  @default("onboarding_quiz") // onboarding_quiz, popular
   
   // ── Usage & Cost ──
-  monthlySpendCap       Float   @default(300) // USD
+  monthlySpendCap       Decimal @db.Decimal(10,2)   @default(300) // USD
   spendCapEnabled       Boolean @default(false)
   
   // ── Default Provider/Model ──
@@ -1667,8 +1671,8 @@ model AIProvider {
   isActive      Boolean  @default(true)
   isDefault     Boolean  @default(false)
   priority      Int      @default(0) // higher = preferred
-  config        String   @default("{}") // JSON: provider-specific config
-  monthlyBudget Float?   // per-provider budget cap
+  config        String   @default("{}") @db.VarChar(4000) // JSON: provider-specific config
+  monthlyBudget Decimal? @db.Decimal(10,2)   // per-provider budget cap
   healthStatus  String   @default("unknown") // unknown, healthy, degraded, down
   lastHealthCheck DateTime?
   createdAt     DateTime @default(now())
@@ -1690,8 +1694,8 @@ model AIModel {
   isDefault       Boolean   @default(false)
   
   // ── Pricing (per 1M tokens) ──
-  inputPricePer1M  Float    @default(0) // USD per 1M input tokens
-  outputPricePer1M Float    @default(0) // USD per 1M output tokens
+  inputPricePer1M  Decimal @db.Decimal(10,2)    @default(0) // USD per 1M input tokens
+  outputPricePer1M Decimal @db.Decimal(10,2)    @default(0) // USD per 1M output tokens
   
   // ── Capabilities ──
   contextWindow   Int       @default(4096)
@@ -1699,7 +1703,7 @@ model AIModel {
   supportsVision  Boolean   @default(false)
   supportsStreaming Boolean @default(true)
   supportsJson    Boolean   @default(true)
-  capabilities    String    @default("{}") // JSON: extra capabilities
+  capabilities    String    @default("{}") @db.VarChar(4000) // JSON: extra capabilities
   
   // ── Rate Limits ──
   rpmLimit        Int?      // requests per minute
@@ -1728,7 +1732,7 @@ model AIUsageLog {
   totalTokens     Int      @default(0)
   
   // ── Cost ──
-  costUSD         Float    @default(0)
+  costUSD         Decimal @db.Decimal(10,2)    @default(0)
   
   // ── Performance ──
   latencyMs       Int?     // response time in ms
@@ -1744,7 +1748,7 @@ model AIUsageLog {
   courseId        String?
   sessionId       String?  // tutor session ID
   requestId       String?  // unique request ID
-  metadata        String   @default("{}") // JSON: additional context
+  metadata        String   @default("{}") @db.VarChar(4000) // JSON: additional context
   
   createdAt       DateTime @default(now())
   
@@ -1760,12 +1764,12 @@ model AIPromptTemplate {
   category      String   @default("general") // tutor, content, moderation, recommendation, general
   description   String?
   content       String   // the actual prompt text
-  variables     String   @default("[]") // JSON array of variable names e.g. ["course_name", "student_level"]
+  variables     String   @default("[]") @db.VarChar(1000) // JSON array of variable names e.g. ["course_name", "student_level"]
   version       Int      @default(1)
   isActive      Boolean  @default(true)
   isDefault     Boolean  @default(false)
   parentVersionId String? // for version tracking
-  tags          String   @default("[]") // JSON array of tags
+  tags          String   @default("[]") @db.VarChar(1000) // JSON array of tags
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -1776,13 +1780,13 @@ model AIAuditLog {
   action        String   // config_update, provider_add, provider_toggle, model_add, etc.
   category      String   // config, provider, model, prompt, security
   description   String
-  previousValue String?  // JSON snapshot of previous state
-  newValue      String?  // JSON snapshot of new state
+  previousValue String? @db.MediumText // JSON snapshot of previous state
+  newValue      String? @db.MediumText // JSON snapshot of new state
   performedBy   String?  // user ID or "system"
   ipAddress     String?
   userAgent     String?
   severity      String   @default("info") // info, warning, critical
-  metadata      String   @default("{}") // JSON
+  metadata        String   @default("{}") @db.VarChar(4000) // JSON
   createdAt     DateTime @default(now())
 }
 
@@ -1828,8 +1832,8 @@ model AppearanceBranding {
 
   // ── Footer ──
   footerVisible     Boolean  @default(true)
-  footerContent     String?  // JSON: {columns: [{title, links: [{label, url}]}]}
-  footerSocialLinks String?  // JSON: {twitter, facebook, instagram, linkedin, youtube, tiktok}
+  footerContent     String? @db.MediumText // JSON: {columns: [{title, links: [{label, url}]}]}
+  footerSocialLinks String? @db.MediumText // JSON: {twitter, facebook, instagram, linkedin, youtube, tiktok}
   footerCopyrightText String @default("© 2024 ShijlAI Academy. All rights reserved.")
 
   // ── Social & Open Graph ──
@@ -1873,7 +1877,7 @@ model AppearanceBranding {
   enableCustomCss    Boolean  @default(false)
   customCss          String?
   enableCustomJs     Boolean  @default(false)
-  customJs           String?  // custom JavaScript injection
+  customJs           String? @db.Text // custom JavaScript injection
   enableAnimations   Boolean  @default(true)  // toggle platform animations
   compactMode        Boolean  @default(false)  // compact UI mode
 
@@ -1933,7 +1937,7 @@ model SecuritySettings {
   idleTimeoutMinutes        Int      @default(30)
   // ── IP Management ──
   ipWhitelistEnabled        Boolean  @default(false)
-  ipWhitelist               String?  // JSON array of IP strings
+  ipWhitelist               String? @db.MediumText // JSON array of IP strings
   // ── Login Alerts ──
   loginAlertsEnabled        Boolean  @default(true)
   alertEmail                String?
@@ -1943,7 +1947,7 @@ model SecuritySettings {
   failedLoginThreshold      Int      @default(500) // daily threshold for alert
   // ── CORS ──
   corsEnabled               Boolean  @default(false)
-  corsAllowedOrigins        String?  // JSON array of origin strings
+  corsAllowedOrigins        String? @db.MediumText // JSON array of origin strings
   // ── Meta ──
   lastSecurityScanAt        DateTime @default(now())
   updatedAt                 DateTime @updatedAt
@@ -1952,7 +1956,7 @@ model SecuritySettings {
 model SecurityRole {
   id          String   @id @default(cuid())
   name        String   @unique
-  permissions String   // JSON array of permission strings
+  permissions String @db.MediumText // JSON array of permission strings
   isDefault   Boolean  @default(false)
   description String?
   createdAt   DateTime @default(now())
@@ -2001,7 +2005,7 @@ model SecurityEvent {
   type        String   // api_key_generated, api_key_revoked, role_created, role_updated, role_deleted, ip_blocked, ip_unblocked, settings_updated, user_locked, user_unlocked, suspicious_activity
   userId      String?  // target user
   actorId     String?  // admin who performed the action
-  details     String?  // JSON with event details
+  details     String? @db.MediumText // JSON with event details
   ip          String?
   createdAt   DateTime @default(now())
 }
@@ -2048,7 +2052,7 @@ model PlatformSettings {
   // ── Maintenance Mode ──
   maintenanceMode             Boolean  @default(false)
   maintenanceMessage          String   @default("We're upgrading ShijlAI Academy. Back in 2 hours!")
-  maintenanceWhitelistIps     String?  // JSON array of IP strings
+  maintenanceWhitelistIps     String? @db.MediumText // JSON array of IP strings
   maintenanceScheduledStart   DateTime?
   maintenanceScheduledEnd     DateTime?
   maintenanceNotifyUsers      Boolean  @default(true)
@@ -2064,7 +2068,7 @@ model PlatformSettings {
   smtpFromEmail     String   @default("noreply@shijlai.academy")
   smtpReplyTo       String?
   emailHeaderImageUrl String? // logo URL for emails
-  emailTemplateBody String?  // JSON: custom email template wrapper
+  emailTemplateBody String? @db.MediumText // JSON: custom email template wrapper
 
   // ── SEO ──
   seoMetaTitle       String?  // default meta title
@@ -2099,7 +2103,7 @@ model PlatformSettings {
   moderationQueueThreshold Int    @default(3) // flags before auto-quarantine
 
   // ── CORS & Security ──
-  allowedOrigins     String?  // JSON array of allowed origins
+  allowedOrigins     String? @db.MediumText // JSON array of allowed origins
   corsEnabled        Boolean  @default(false)
 
   updatedAt                   DateTime @updatedAt
@@ -2110,7 +2114,7 @@ model WebhookConfig {
   name          String   // display name
   url           String   // webhook endpoint URL
   secret        String?  // signing secret
-  events        String   // JSON array of event types: [user.created, enrollment.created, payment.completed, course.published, etc.]
+  events        String @db.MediumText // JSON array of event types: [user.created, enrollment.created, payment.completed, course.published, etc.]
   isActive      Boolean  @default(true)
   lastTriggeredAt DateTime?
   lastResponseStatus Int?  // HTTP status of last delivery
@@ -2121,7 +2125,7 @@ model WebhookConfig {
 
 model AppearanceHistory {
   id          String   @id @default(cuid())
-  snapshot    String   // JSON snapshot of full AppearanceBranding config
+  snapshot    String @db.MediumText // JSON snapshot of full AppearanceBranding config
   presetName  String?  // theme preset name at time of snapshot
   changedBy   String?  // admin userId
   changeDescription String? // what was changed
@@ -2134,7 +2138,7 @@ model PaymentMethodConfig {
   displayName     String   // Stripe, JazzCash, Easypaisa, Payoneer, Bank Transfer
   isConnected     Boolean  @default(false)
   isActive        Boolean  @default(true)
-  config          String?  // JSON: {apiKey, merchantId, accountNumber, etc.} (masked for display)
+  config          String? @db.MediumText // JSON: {apiKey, merchantId, accountNumber, etc.} (masked for display)
   icon            String?  // emoji or icon identifier
   order           Int      @default(0)
   createdAt       DateTime @default(now())
@@ -2147,7 +2151,7 @@ model Integration {
   displayName     String   // Anthropic (AI), Cloudflare Stream, etc.
   category        String   // ai, video, marketing, analytics, communication, automation
   isConnected     Boolean  @default(false)
-  config          String?  // JSON: {apiKey, trackingId, etc.}
+  config          String? @db.MediumText // JSON: {apiKey, trackingId, etc.}
   usageInfo       String?  // e.g., "48.2M tokens/mo", "48,214 contacts synced"
   icon            String?  // emoji or icon identifier
   order           Int      @default(0)
@@ -2234,7 +2238,7 @@ model XpActivity {
   xpAmount    Int      @default(0)
   coinAmount  Int      @default(0)
   description String   // human-readable description
-  metadata    String?  // JSON: {courseId, lessonId, badgeId, quizId, etc.}
+  metadata    String? @db.MediumText // JSON: {courseId, lessonId, badgeId, quizId, etc.}
   createdAt   DateTime @default(now())
 }
 
@@ -2256,7 +2260,7 @@ model CommunityEvent {
   attendeeCount Int    @default(0)
   isFree      Boolean  @default(true)
   status      String   @default("upcoming") // upcoming, live, completed, cancelled
-  tags        String?  // JSON array of tag strings
+  tags        String? @db.MediumText // JSON array of tag strings
   createdBy   String
   creator     User     @relation("CreatedEvents", fields: [createdBy], references: [id])
   courseId    String?  // optional: linked to a course
@@ -2290,7 +2294,7 @@ model StudyGroupMessage {
   user        User     @relation(fields: [userId], references: [id])
   content     String
   type        String   @default("text") // text, resource, announcement, system
-  attachments String?  // JSON array of {url, name, type, size}
+  attachments String? @db.MediumText // JSON array of {url, name, type, size}
   isPinned    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2306,7 +2310,7 @@ model StudyGroupResource {
   description String?
   url         String?
   fileType    String   @default("link") // link, pdf, video, document, image, code
-  tags        String?  // JSON array of tag strings
+  tags        String? @db.MediumText // JSON array of tag strings
   downloads   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2331,11 +2335,11 @@ model ScheduleEvent {
   courseId    String?  // optional: linked to a course
   course      Course?  @relation(fields: [courseId], references: [id])
   isRecurring Boolean  @default(false)
-  recurrencePattern String? // JSON: {frequency, days, endDate}
-  reminders   String?  // JSON array of {type: "minutes_before", value: 15}
+  recurrencePattern String? @db.MediumText // JSON: {frequency, days, endDate}
+  reminders   String? @db.MediumText // JSON array of {type: "minutes_before", value: 15}
   status      String   @default("scheduled") // scheduled, completed, cancelled, rescheduled
   priority    String   @default("medium") // low, medium, high, urgent
-  tags        String?  // JSON array of tag strings
+  tags        String? @db.MediumText // JSON array of tag strings
   notes       String?  // additional notes
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2425,11 +2429,11 @@ model AIGeneration {
   instructor    User     @relation(fields: [instructorId], references: [id])
   toolType      String   // curriculum, quiz, caption, assignment, description, thumbnail, qa-responder, feedback-analyzer
   title         String   // short title/label for the generation
-  inputParams   String   // JSON: the input parameters used
+  inputParams   String @db.MediumText // JSON: the input parameters used
   resultContent String   // the generated text content
-  resultImages  String?  // JSON array of base64 image strings (for thumbnail tool)
+  resultImages  String? @db.MediumText // JSON array of base64 image strings (for thumbnail tool)
   isFavorite    Boolean  @default(false)
-  tags          String?  // JSON array of tag strings
+  tags          String? @db.MediumText // JSON array of tag strings
   courseId      String?  // optional: linked to a course
   course        Course?  @relation(fields: [courseId], references: [id])
   createdAt     DateTime @default(now())
@@ -2443,7 +2447,7 @@ model AITemplate {
   toolType     String   // curriculum, quiz, caption, assignment, description, thumbnail, qa-responder, feedback-analyzer
   name         String   // template name
   description  String?  // optional description
-  inputParams  String   // JSON: pre-filled input parameters for this template
+  inputParams  String @db.MediumText // JSON: pre-filled input parameters for this template
   isDefault    Boolean  @default(false) // system default vs user-created
   usageCount   Int      @default(0)
   createdAt    DateTime @default(now())
@@ -2476,7 +2480,7 @@ model FeatureFlag {
 model PlatformSetting {
   id    String @id @default(cuid())
   key   String @unique // e.g. "maintenance_mode", "registration_open", "max_file_upload_mb", "platform_commission_pct"
-  value String // JSON string or plain value
+  value String @db.MediumText // JSON string or plain value
   label String // human-readable label
   type  String @default("string") // string, number, boolean, json
   category String @default("general") // general, security, finance, email, appearance
@@ -2507,10 +2511,10 @@ model CourseReviewHistory {
   reviewerId  String?  // admin userId who performed the action
   reviewerName String? // admin display name
   note        String?  // review note/comment
-  checklist   String?  // JSON snapshot of checklist at time of action
+  checklist   String? @db.MediumText // JSON snapshot of checklist at time of action
   previousStatus String? // previous review status
   newStatus   String?  // new review status
-  metadata    String?  // JSON for extra data
+  metadata    String? @db.MediumText // JSON for extra data
   createdAt   DateTime @default(now())
 
   @@index([courseId])
@@ -2528,7 +2532,7 @@ model ApiUsageLog {
   responseTime Int     // response time in ms
   ipAddress   String?  // client IP
   userAgent   String?  // client user agent
-  requestBody String?  // JSON of request body (truncated)
+  requestBody String? @db.MediumText // JSON of request body (truncated)
   userId      String?  // user who made the request
   error       String?  // error message if failed
   createdAt   DateTime @default(now())
@@ -2547,13 +2551,13 @@ model BlogPost {
   excerpt         String
   content         String   // HTML content
   category        String
-  tags            String   // JSON array string e.g. '["AI","EdTech"]'
+  tags            String @db.MediumText // JSON array string e.g. '["AI","EdTech"]'
   coverImage      String?
   gradient        String   @default("from-emerald-500 to-teal-600")
   authorId        String
   author          User     @relation(fields: [authorId], references: [id], name: "BlogPosts")
   authorName      String
-  authorAvatar    String?
+  authorAvatar    String? @db.LongText
   authorBio       String?
   status          String   @default("draft") // draft | published | archived
   featured        Boolean  @default(false)
@@ -2585,10 +2589,10 @@ model StudentLearningProfile {
   dropRiskScore         Float     @default(0) // 0-100 (0-30 safe, 30-60 warning, 60-100 high risk)
   completionRate        Float     @default(0) // percentage
   averageQuizScore      Float     @default(0)
-  weakTopics            String    @default("[]") // JSON array of strings
-  strongTopics          String    @default("[]") // JSON array of strings
+  weakTopics            String    @default("[]") @db.VarChar(1000) // JSON array of strings
+  strongTopics          String    @default("[]") @db.VarChar(1000) // JSON array of strings
   learningSpeed         String    @default("moderate") // slow, moderate, fast
-  recommendedTopics     String    @default("[]") // JSON array
+  recommendedTopics     String    @default("[]") @db.VarChar(1000) // JSON array
   totalXpEarned         Int       @default(0)
   totalLessonsCompleted Int       @default(0)
   totalQuizzesTaken     Int       @default(0)
@@ -2627,10 +2631,10 @@ model ShijlAIMessage {
   userId      String
   user        User     @relation(fields: [userId], references: [id])
   role        String // user, assistant, system
-  content     String
+  content     String @db.Text
   mode        String   @default("tutor") // which mode was active
   quickAction String? // explain_simpler, more_examples, test_me, translate, generate_quiz, create_plan
-  metadata    String? // JSON for additional context data
+  metadata    String? @db.MediumText // JSON for additional context data
   createdAt   DateTime @default(now())
 }
 
@@ -2639,7 +2643,7 @@ model ConversationSummary {
   sessionId        String
   session          ShijlAISession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   summary          String
-  keyTopics        String   @default("[]") // JSON array of topic strings
+  keyTopics        String   @default("[]") @db.VarChar(1000) // JSON array of topic strings
   messageRangeStart Int // message index start
   messageRangeEnd   Int // message index end
   createdAt        DateTime @default(now())
@@ -2661,7 +2665,7 @@ model AIRecommendation {
   priorityScore        Float     @default(50) // 0-100 computed priority
   status               String    @default("active") // active, pending, viewed, dismissed, completed
   sourceEvent          String? // quiz_completion, assignment_submission, lesson_completion, ai_analysis
-  sourceData           String? // JSON with event context
+  sourceData           String? @db.MediumText // JSON with event context
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 }
@@ -2675,7 +2679,7 @@ model LearningInsight {
   description      String
   category         String    @default("general") // general, academic, study_habits, time_management, quiz_performance
   severity         String    @default("info") // info, warning, critical
-  relatedData      String? // JSON with supporting data
+  relatedData      String? @db.MediumText // JSON with supporting data
   isRead           Boolean   @default(false)
   isActionable     Boolean   @default(true)
   actionSuggestion String? // suggested action
@@ -2692,8 +2696,8 @@ model AIQuizGeneration {
   topic            String
   difficulty       String   @default("medium") // easy, medium, hard, mixed
   questionCount    Int      @default(5)
-  questionTypes    String   @default("[]") // JSON array: mcq, true_false, fill_blank, short_answer
-  generatedContent String // JSON with generated questions
+  questionTypes    String   @default("[]") @db.VarChar(500) // JSON array: mcq, true_false, fill_blank, short_answer
+  generatedContent String @db.MediumText // JSON with generated questions
   status           String   @default("generated") // generated, reviewed, approved, rejected
   reviewNotes      String?
   createdAt        DateTime @default(now())
@@ -2706,8 +2710,8 @@ model StudyPlan {
   title               String
   examDate            DateTime?
   availableHoursPerDay Float   @default(2)
-  subjects            String   @default("[]") // JSON array of subject strings
-  planData            String   @default("{}") // JSON with daily schedule
+  subjects            String   @default("[]") @db.VarChar(1000) // JSON array of subject strings
+  planData            String   @default("{}") @db.VarChar(8000) // JSON with daily schedule
   status              String   @default("active") // active, completed, abandoned
   progress            Float    @default(0) // percentage
   targetGrade         String?  // target grade (e.g., "A", "90%")
@@ -2750,7 +2754,7 @@ model StudentAIActivity {
   activityType String // chat_message, quiz_generated, study_plan_created, recommendation_viewed, insight_viewed
   mode         String? // tutor, quiz, assignment, study_planner, career_advisor
   sessionId    String?
-  metadata     String? // JSON
+  metadata     String? @db.MediumText // JSON
   createdAt    DateTime @default(now())
 
   @@index([userId])
@@ -2769,7 +2773,7 @@ model LearningMetric {
   topicId     String?  // topic/module identifier (e.g., course category, module title)
   eventType   String   // lesson_completed, quiz_attempted, assignment_submitted, time_spent, course_enrolled, ai_tutor_used, login, video_watched, note_created, bookmark_created
   eventValue  Float    @default(0) // score / duration / completion (0-100 for scores, seconds for time)
-  metadata    String?  // JSON for additional context (quizId, lessonId, etc.)
+  metadata    String? @db.MediumText // JSON for additional context (quizId, lessonId, etc.)
   createdAt   DateTime @default(now())
 
   @@index([userId])
@@ -2860,7 +2864,7 @@ model LearningEvent {
   score       Float?   // quiz/assignment score (0-100)
   timeSpent   Int      @default(0) // seconds spent on this event
 
-  metadata    String?  // JSON for additional context (topic, question answers, etc.)
+  metadata    String? @db.MediumText // JSON for additional context (topic, question answers, etc.)
 
   createdAt   DateTime @default(now())
 
@@ -2896,9 +2900,9 @@ model AIGeneratedOutline {
   courseId         String?
   course           Course?  @relation(fields: [courseId], references: [id])
   prompt           String
-  generatedContent String   // JSON: {description, objectives, modules: [{title, lessons: [{title}]}], prerequisites, estimatedDuration}
+  generatedContent String @db.MediumText // JSON: {description, objectives, modules: [{title, lessons: [{title}]}], prerequisites, estimatedDuration}
   status           String   @default("generated") // generated, reviewed, approved, rejected
-  editedContent    String?  // JSON: instructor's edited version
+  editedContent    String? @db.MediumText // JSON: instructor's edited version
   reviewNotes      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -2914,8 +2918,8 @@ model AIGeneratedLesson {
   courseId         String?
   course           Course?  @relation(fields: [courseId], references: [id])
   topic            String
-  structureContent String?  // JSON: {introduction, keyConcepts, examples, applications, summary, quizQuestions, references}
-  lessonContent    String?  // JSON: {notes, examples, exercises, summary}
+  structureContent String? @db.MediumText // JSON: {introduction, keyConcepts, examples, applications, summary, quizQuestions, references}
+  lessonContent    String? @db.MediumText // JSON: {notes, examples, exercises, summary}
   status           String   @default("structure_generated") // structure_generated, structure_approved, content_generated, reviewed, approved, rejected
   editedContent    String?
   reviewNotes      String?
@@ -2934,7 +2938,7 @@ model AIGeneratedAssignment {
   course           Course?  @relation(fields: [courseId], references: [id])
   topic            String
   difficulty       String   @default("medium") // easy, medium, hard
-  generatedContent String   // JSON: {title, problemStatement, instructions, deliverables, submissionFormat}
+  generatedContent String @db.MediumText // JSON: {title, problemStatement, instructions, deliverables, submissionFormat}
   status           String   @default("generated") // generated, reviewed, approved, rejected
   editedContent    String?
   reviewNotes      String?
@@ -2954,7 +2958,7 @@ model AIGeneratedRubric {
   assignmentId     String?
   assignment       Assignment? @relation(fields: [assignmentId], references: [id])
   topic            String
-  generatedContent String   // JSON: {criteria: [{name, weight, description, levels: [{level, score, description}]}]}
+  generatedContent String @db.MediumText // JSON: {criteria: [{name, weight, description, levels: [{level, score, description}]}]}
   status           String   @default("generated") // generated, reviewed, approved, rejected
   editedContent    String?
   reviewNotes      String?
@@ -2972,10 +2976,10 @@ model AIGeneratedQuiz {
   courseId         String?
   course           Course?  @relation(fields: [courseId], references: [id])
   topic            String
-  questionTypes    String   @default("[]") // JSON array: mcq, true_false, short_answer, long_answer
+  questionTypes    String   @default("[]") @db.VarChar(500) // JSON array: mcq, true_false, short_answer, long_answer
   difficulty       String   @default("medium")
   questionCount    Int      @default(5)
-  generatedContent String   // JSON: {questions: [{type, text, options, correctAnswer, explanation, points}]}
+  generatedContent String @db.MediumText // JSON: {questions: [{type, text, options, correctAnswer, explanation, points}]}
   status           String   @default("generated") // generated, reviewed, approved, rejected
   editedContent    String?
   reviewNotes      String?
@@ -2993,7 +2997,7 @@ model InstructorAIActivity {
   activityType String   // outline_generated, outcomes_generated, structure_generated, content_generated, quiz_generated, assignment_generated, rubric_generated, insight_viewed
   moduleType   String   // outline, outcomes, structure, content, quiz, assignment, rubric, insights
   title        String
-  metadata     String?  // JSON
+  metadata     String? @db.MediumText // JSON
   createdAt    DateTime @default(now())
 
   @@index([instructorId])
@@ -3210,7 +3214,7 @@ model LearningPathNode {
   masteryScore  Float    @default(0) // student's current mastery for this topic
   xpReward      Int      @default(0)
   duration      Int      @default(0) // estimated minutes
-  metadata      String?  // JSON: extra data (skillId, topicId, etc.)
+  metadata      String? @db.MediumText // JSON: extra data (skillId, topicId, etc.)
   completedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -3238,7 +3242,7 @@ model AICompanionMessage {
   priority    String   @default("normal") // low, normal, high, urgent
   isRead      Boolean  @default(false)
   actionType  String?  // review_lesson, take_quiz, continue_path, reschedule_plan, start_session
-  actionData  String?  // JSON: {courseId, lessonId, quizId, pathId, etc.}
+  actionData  String? @db.MediumText // JSON: {courseId, lessonId, quizId, pathId, etc.}
   createdAt   DateTime @default(now())
 
   @@index([studentId, isRead])
@@ -3250,7 +3254,7 @@ model AICompanionEvent {
   studentId   String
   student     User     @relation(fields: [studentId], references: [id])
   eventType   String   // login, lesson_complete, quiz_attempt, study_streak, inactivity_detected, weak_topic_detected, plan_missed, goal_achieved
-  eventData   String?  // JSON: event-specific data
+  eventData   String? @db.MediumText // JSON: event-specific data
   createdAt   DateTime @default(now())
 
   @@index([studentId, eventType])
@@ -3271,8 +3275,8 @@ model MockInterview {
   clarity       Float    @default(0) // communication clarity %
   confidence    Float    @default(0) // confidence score %
   feedback      String?  // AI-generated overall feedback
-  strengths     String?  // JSON array of strength areas
-  weaknesses    String?  // JSON array of weak areas
+  strengths     String? @db.MediumText // JSON array of strength areas
+  weaknesses    String? @db.MediumText // JSON array of weak areas
   startedAt     DateTime @default(now())
   completedAt   DateTime?
   createdAt     DateTime @default(now())
@@ -3313,8 +3317,8 @@ model GeneratedReport {
   generatedBy     String?  // admin user id
   courseId        String?  // optional filter for course_performance
   instructorId    String?  // optional filter for instructor_performance
-  reportData      String?  // JSON: computed metrics
-  reportSummary   String?  // JSON: AI-generated summary { executiveSummary, keyInsights, risks, recommendations }
+  reportData      String? @db.MediumText // JSON: computed metrics
+  reportSummary   String? @db.MediumText // JSON: AI-generated summary { executiveSummary, keyInsights, risks, recommendations }
   errorMessage    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -3334,9 +3338,9 @@ model CourseQualityAnalysis {
   successScore      Float    @default(0) // 0-100
   engagementScore   Float    @default(0) // 0-100
   contentScore      Float    @default(0) // 0-100
-  strengths         String?  // JSON array of strings
-  weaknesses        String?  // JSON array of strings
-  recommendations   String?  // JSON array of strings
+  strengths         String? @db.MediumText // JSON array of strings
+  weaknesses        String? @db.MediumText // JSON array of strings
+  recommendations   String? @db.MediumText // JSON array of strings
   aiAnalysis        String?  // Full AI-generated analysis text
   analyzedAt        DateTime @default(now())
   createdAt         DateTime @default(now())

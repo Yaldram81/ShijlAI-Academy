@@ -274,7 +274,7 @@ export async function GET(request: Request) {
       isEnrolled: enrolledCourseIds.has(course.id),
     }));
 
-    // Build facets from the courses themselves (avoids groupBy issues with SQLite)
+    // Build facets from the courses themselves (avoids groupBy query overhead)
     const allMatchingCourses = await db.course.findMany({
       where: whereConditions,
       select: { category: true, level: true, price: true, language: true, certificateEnabled: true },

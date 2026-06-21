@@ -199,7 +199,7 @@ function calcProfileCompletion(profile: typeof defaultProfile, expertise: Expert
    PROFILE TAB
    ═══════════════════════════════════════════════════════════ */
 function ProfileTab() {
-  const { currentUser } = useAppStore()
+  const { currentUser, setCurrentUser } = useAppStore()
   const [profile, setProfile] = useState(defaultProfile)
   const [expertise, setExpertise] = useState<ExpertiseTag[]>([])
   const [langs, setLangs] = useState<LanguageTag[]>([])
@@ -310,8 +310,12 @@ function ProfileTab() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUser?.id, avatarData: base64 }),
         })
-        if (!res.ok) throw new Error('Failed to upload photo')
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || 'Failed to upload photo')
+        }
         setPhotoUrl(base64)
+        if (currentUser) setCurrentUser({ ...currentUser, avatar: base64 })
         toast.success('Photo uploaded & saved!')
       }
       reader.readAsDataURL(file)
@@ -326,6 +330,7 @@ function ProfileTab() {
       })
       if (!res.ok) throw new Error('Failed to remove photo')
       setPhotoUrl('')
+      if (currentUser) setCurrentUser({ ...currentUser, avatar: undefined })
       toast.success('Photo removed')
     } catch { toast.error('Failed to remove photo') }
   }

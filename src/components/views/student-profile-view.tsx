@@ -322,6 +322,10 @@ export function StudentProfileView() {
         const transformed: StudentProfileData = {
           user: {
             ...currentUser,
+            name: pi.name || currentUser.name,
+            email: pi.email || currentUser.email,
+            avatar: pi.avatar || currentUser.avatar,
+            bio: pi.bio ?? currentUser.bio,
             headline: st.headline || null,
             location: st.location || null,
             website: st.website || null,
@@ -484,10 +488,14 @@ export function StudentProfileView() {
     if (!currentUser) return
     setSaving(true)
     try {
+      const payload = { studentId: currentUser.id, ...editForm }
+      if (payload.website && !/^https?:\/\//i.test(payload.website)) payload.website = `https://${payload.website}`
+      if (payload.linkedin && !/^https?:\/\//i.test(payload.linkedin)) payload.linkedin = `https://${payload.linkedin}`
+
       const res = await fetch('/api/student/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: currentUser.id, ...editForm }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         const updated = await res.json()
@@ -532,42 +540,64 @@ export function StudentProfileView() {
     const file = e.target.files?.[0]
     if (!file || !currentUser) return
 
-    // Validate file type and size
+    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select a valid image file')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be smaller than 5MB')
       return
     }
 
     setAvatarUploading(true)
     try {
       const reader = new FileReader()
-      reader.onload = async () => {
-        const base64 = reader.result as string
-        try {
-          const res = await fetch('/api/student/profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentId: currentUser.id, avatar: base64 }),
-          })
-          if (res.ok) {
-            const json = await res.json()
-            setProfileData(prev => prev ? { ...prev, user: { ...prev.user, avatar: json.avatar } } : prev)
-            // Sync to global store so header avatar updates
-            setCurrentUser({ ...currentUser, avatar: json.avatar })
-            toast.success('Profile photo updated!')
+      reader.onload = (event) => {
+        const img = new Image()
+        img.onload = async () => {
+          const canvas = document.createElement('canvas')
+          const MAX_WIDTH = 400
+          const MAX_HEIGHT = 400
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
           } else {
-            const err = await res.json().catch(() => ({}))
-            toast.error(err.error || 'Failed to upload photo')
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
           }
-        } catch {
-          toast.error('Failed to upload photo')
-        } finally {
-          setAvatarUploading(false)
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+          const base64 = canvas.toDataURL('image/jpeg', 0.8)
+
+          try {
+            const res = await fetch('/api/student/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ studentId: currentUser.id, avatar: base64 }),
+            })
+            if (res.ok) {
+              const json = await res.json()
+              setProfileData(prev => prev ? { ...prev, user: { ...prev.user, avatar: json.avatar } } : prev)
+              // Sync to global store so header avatar updates
+              setCurrentUser({ ...currentUser, avatar: json.avatar })
+              toast.success('Profile photo updated!')
+            } else {
+              const err = await res.json().catch(() => ({}))
+              toast.error(err.error || 'Failed to upload photo')
+            }
+          } catch {
+            toast.error('Failed to upload photo')
+          } finally {
+            setAvatarUploading(false)
+          }
         }
+        img.src = event.target?.result as string
       }
       reader.readAsDataURL(file)
     } catch {

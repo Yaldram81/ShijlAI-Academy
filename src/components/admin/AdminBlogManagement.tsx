@@ -70,6 +70,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { AdminStatCard, AdminStatCardGrid } from './admin-stat-card'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 
 /* ─── Constants ─── */
 const CATEGORIES = ['AI & Tech', 'Study Tips', 'Subject Guides', 'Career', 'EdTech', 'Science', 'General']
@@ -1235,14 +1236,13 @@ export function AdminBlogManagement() {
 
               {/* Content */}
               <div className="grid gap-2">
-                <Label htmlFor="content">Content (HTML)</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Write your post content here... Supports HTML formatting."
-                  className="rounded-xl min-h-[250px] font-mono text-sm"
-                  value={formData.content}
-                  onChange={(e) => updateForm('content', e.target.value)}
-                />
+                <Label htmlFor="content">Content</Label>
+                <div className="border rounded-xl overflow-hidden bg-background">
+                  <RichTextEditor
+                    content={formData.content}
+                    onChange={(content) => updateForm('content', content)}
+                  />
+                </div>
               </div>
 
               {/* Category & Read Time */}
