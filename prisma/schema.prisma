@@ -1779,7 +1779,7 @@ model AIAuditLog {
   id            String   @id @default(cuid())
   action        String   // config_update, provider_add, provider_toggle, model_add, etc.
   category      String   // config, provider, model, prompt, security
-  description   String
+  description   String   @db.Text
   previousValue String? @db.MediumText // JSON snapshot of previous state
   newValue      String? @db.MediumText // JSON snapshot of new state
   performedBy   String?  // user ID or "system"

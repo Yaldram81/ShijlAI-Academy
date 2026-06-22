@@ -245,7 +245,7 @@ export default function Home() {
   const isInstructor = currentUser?.role === 'instructor'
   const isAdmin = currentUser?.role === 'admin'
   const isMessagesView = currentView === 'student-messages' || currentView === 'instructor-messages'
-  const isFullView = isMessagesView || currentView === 'tutor' || currentView === 'recommendations' || currentView === 'shijlai-hub'
+  const isFullView = isMessagesView || currentView === 'tutor' || currentView === 'recommendations' || currentView === 'shijlai-hub' || currentView === 'admin-copilot' || currentView === 'instructor-copilot'
 
   // Auth views: full-screen without sidebar/header
   if (isAuthView) {
