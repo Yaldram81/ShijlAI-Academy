@@ -336,6 +336,8 @@ export function AskShijlAIView() {
   const [pastSessions, setPastSessions] = useState<PastSession[]>([])
   const [isRecording, setIsRecording] = useState(false)
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
+  const [courseLessons, setCourseLessons] = useState<{id: string, title: string, moduleTitle: string}[]>([])
   const [activeMode, setActiveMode] = useState<AIMode>('tutor')
   const [learningProfile, setLearningProfile] = useState<LearningProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
@@ -609,13 +611,8 @@ export function AskShijlAIView() {
     }
   }
 
-  const handleQuickAction = (actionId: string) => {
-    const lastAiMessage = [...messages].reverse().find((m) => m.role === 'assistant')
-    if (lastAiMessage) {
-      sendMessage(`Continue from where we left off`, actionId)
-    } else {
-      sendMessage('Help me get started!', actionId)
-    }
+  const handleQuickAction = (actionId: string, label: string) => {
+    sendMessage(label, actionId)
   }
 
   const clearChat = () => {
@@ -696,15 +693,46 @@ ${'═'.repeat(60)}
     [enrolledCourses, selectedCourseId]
   )
 
-  // Update context when course dropdown changes
+  // Update context when course or lesson dropdown changes
   useEffect(() => {
     if (selectedCourseId) {
       const course = enrolledCourses.find(c => c.id === selectedCourseId)
-      if (course) setContext(course.title)
+      let baseContext = course ? course.title : ''
+      if (selectedLessonId) {
+         const lesson = courseLessons.find(l => l.id === selectedLessonId)
+         if (lesson) baseContext += ` - ${lesson.title}`
+      }
+      setContext(baseContext || null)
     } else {
       setContext(null)
     }
-  }, [selectedCourseId, enrolledCourses])
+  }, [selectedCourseId, selectedLessonId, enrolledCourses, courseLessons])
+
+  // Fetch course lessons when course changes
+  useEffect(() => {
+    if (selectedCourseId) {
+      fetch(`/api/courses/${selectedCourseId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.course?.modules) {
+             const lessons = data.course.modules.flatMap((m: any) => 
+               (m.lessons || []).map((l: any) => ({
+                 id: l.id, 
+                 title: l.title, 
+                 moduleTitle: m.title
+               }))
+             )
+             setCourseLessons(lessons)
+          } else {
+             setCourseLessons([])
+          }
+        })
+        .catch(() => setCourseLessons([]))
+    } else {
+      setCourseLessons([])
+      setSelectedLessonId(null)
+    }
+  }, [selectedCourseId])
 
   // ─── Delete session ───
   const deleteSession = async (sessId: string) => {
@@ -778,29 +806,51 @@ ${'═'.repeat(60)}
     <div className="flex h-full rounded-2xl border border-border/40 overflow-hidden bg-background">
 
       {/* ═══ COLLAPSIBLE HISTORY SIDEBAR ═══ */}
-      <AnimatePresence initial={false}>
-        {historyOpen && (
-          <motion.aside
-            key="history-sidebar"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="flex flex-col border-r border-border/40 bg-muted/20 overflow-hidden shrink-0"
-          >
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/30">
-              <h3 className="text-[13px] font-semibold text-foreground">Chat History</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
-                onClick={() => setHistoryOpen(false)}
+      <motion.aside
+        initial={false}
+        animate={{ width: historyOpen ? 280 : 48 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className="flex flex-col border-r border-border/40 bg-muted/20 overflow-hidden shrink-0"
+      >
+        {/* Sidebar Header */}
+        <div className={cn("flex items-center py-2.5 border-b border-border/30 h-[49px]", historyOpen ? "justify-between px-3" : "justify-center px-1")}>
+          <AnimatePresence>
+            {historyOpen && (
+              <motion.h3 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="text-[13px] font-semibold text-foreground whitespace-nowrap"
               >
-                <PanelLeftClose className="size-4" />
-              </Button>
-            </div>
+                Chat History
+              </motion.h3>
+            )}
+          </AnimatePresence>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={() => setHistoryOpen(!historyOpen)}
+                >
+                  {historyOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-[12px]">
+                {historyOpen ? 'Close history' : 'Open chat history'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
+        <AnimatePresence>
+          {historyOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col flex-1 min-h-0 w-[280px]"
+            >
             {/* Search + New Chat */}
             <div className="px-3 py-2 space-y-2 border-b border-border/20">
               <Button
@@ -917,9 +967,10 @@ ${'═'.repeat(60)}
                 {pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''}
               </p>
             </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.aside>
 
       {/* ═══ MAIN CHAT AREA ═══ */}
       <div className="flex flex-1 flex-col min-w-0">
@@ -1032,25 +1083,61 @@ ${'═'.repeat(60)}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* History sidebar toggle */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn('gap-1.5 text-[13px]', historyOpen && cn(currentMode.bgColor, currentMode.color))}
-                    onClick={() => setHistoryOpen(!historyOpen)}
+            {/* Lesson selector (appears only if course is selected) */}
+            {selectedCourseId && courseLessons.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={cn(
+                    'hidden md:flex items-center gap-2 rounded-xl px-3 py-1.5 text-[13px] font-medium transition-colors',
+                    selectedLessonId
+                      ? cn(currentMode.bgColor, currentMode.color, `hover:${currentMode.bgColor}`)
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}>
+                    <FileText className="size-3.5" />
+                    <span className="max-w-[140px] truncate">
+                      {selectedLessonId 
+                        ? courseLessons.find(l => l.id === selectedLessonId)?.title || 'Lesson' 
+                        : 'Lesson'}
+                    </span>
+                    <ChevronDown className="size-3 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="rounded-2xl w-72 shadow-lg max-h-96 overflow-y-auto scrollbar-thin">
+                  <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-popover/90 backdrop-blur-sm z-10">
+                    Course Lessons
+                  </div>
+                  <DropdownMenuItem
+                    onClick={() => setSelectedLessonId(null)}
+                    className="gap-2 rounded-xl"
                   >
-                    {historyOpen ? <PanelLeftClose className="size-3.5" /> : <PanelLeftOpen className="size-3.5" />}
-                    <span className="hidden sm:inline">History</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-[12px]">
-                  {historyOpen ? 'Close history' : 'Open chat history'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                    <Hash className="size-3.5 text-muted-foreground" />
+                    <span className="text-[13px]">All lessons (Whole course)</span>
+                    {!selectedLessonId && <Check className={cn('size-3.5 ml-auto', currentMode.color)} />}
+                  </DropdownMenuItem>
+                  <Separator className="my-1" />
+                  {courseLessons.map((lesson) => (
+                    <DropdownMenuItem
+                      key={lesson.id}
+                      onClick={() => setSelectedLessonId(lesson.id)}
+                      className={cn(
+                        'gap-2.5 rounded-xl',
+                        selectedLessonId === lesson.id && cn(currentMode.bgColor, currentMode.color)
+                      )}
+                    >
+                      <FileText className={cn('size-3.5 shrink-0', currentMode.color)} />
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate text-[13px] block">{lesson.title}</span>
+                        <span className="text-[10px] text-muted-foreground truncate block">{lesson.moduleTitle}</span>
+                      </div>
+                      {selectedLessonId === lesson.id && <Check className={cn('size-3.5 shrink-0', currentMode.color)} />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+
+            {/* History sidebar toggle moved to sidebar */}
 
             {/* New Chat button */}
             <Button
@@ -1066,45 +1153,9 @@ ${'═'.repeat(60)}
               <span className="hidden sm:inline">New Chat</span>
             </Button>
 
-            {/* Language indicator */}
-            <button
-              onClick={() => {
-                const langIdx = LANGUAGES.findIndex(l => l.code === language)
-                const nextLang = LANGUAGES[(langIdx + 1) % LANGUAGES.length]
-                setLanguage(nextLang.code)
-              }}
-              className="hidden sm:flex items-center gap-1 rounded-full bg-muted/50 border border-border/40 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Globe className="size-3" />
-              {currentLang.flag}
-            </button>
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Settings — Language */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground">
-                  <Settings2 className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-2xl w-56 shadow-lg">
-                <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Language
-                </div>
-                {LANGUAGES.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang.code}
-                    onClick={() => setLanguage(lang.code)}
-                    className="gap-2 rounded-xl"
-                  >
-                    <span>{lang.flag}</span>
-                    <span>{lang.label}</span>
-                    {language === lang.code && <Check className={cn('size-3.5 ml-auto', currentMode.color)} />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* Export */}
             <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={exportChat}>
@@ -1289,7 +1340,7 @@ ${'═'.repeat(60)}
                 {currentMode.quickActions.map((action) => (
                   <button
                     key={action.id}
-                    onClick={() => handleQuickAction(action.id)}
+                    onClick={() => handleQuickAction(action.id, action.label)}
                     className={cn(
                       'flex items-center gap-1.5 rounded-full border border-border/50 bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-all',
                       `hover:${currentMode.bgColor}`,
