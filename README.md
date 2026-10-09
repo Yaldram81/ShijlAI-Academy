@@ -390,7 +390,7 @@ This project was conceived, designed, and defended as a **Final Year Project (FY
 * **Lead Engineers & Authors**:
   * **Tanzeel Ur Rahman**
   * **Israr Ullah**
-* **Departmental Profile & Repositories**: [github.com/yaldram81](https://github.com/yaldram81)
+* **Profile & Repositories**: [github.com/yaldram81](https://github.com/yaldram81)
 
 ### Research Citations & IEEE Reference Foundation
 ShijlAI Academy's adaptive engine synthesizes foundational research in knowledge modeling and cognitive science, notably:
