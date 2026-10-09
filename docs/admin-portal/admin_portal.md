@@ -1,7 +1,7 @@
 # ShijlAI Academy — Admin Portal: Complete Implementation Documentation
 
 > **AI-Powered Platform Intelligence & Administration System**
-> Authors: Sadeed Ali [1447], Syed Awais Shah [1457]
+> Authors: Tanzeel Ur Rahman, Israr Ullah
 > University of Malakand — Department of Computer Science & IT
 
 ---

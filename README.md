@@ -17,7 +17,7 @@
 
 **Architected for Cognitive Mastery, Adaptive Pedagogy, and Institutional Intelligence**  
 *Final Year Project (FYP) Thesis — Department of Computer Science & IT, University of Malakand*  
-**Authors**: Sadeed Ali (1447) • Syed Awais Shah (1457)
+**Authors**: Tanzeel Ur Rahman • Israr Ullah
 
 ---
 
@@ -388,8 +388,8 @@ This project was conceived, designed, and defended as a **Final Year Project (FY
 * **Department**: Department of Computer Science & Information Technology
 * **Program**: Bachelor of Science in Computer Science (BSCS)
 * **Lead Engineers & Authors**:
-  * **Sadeed Ali** — Roll No. `1447`
-  * **Syed Awais Shah** — Roll No. `1457`
+  * **Tanzeel Ur Rahman**
+  * **Israr Ullah**
 * **Departmental Profile & Repositories**: [github.com/yaldram81](https://github.com/yaldram81)
 
 ### Research Citations & IEEE Reference Foundation

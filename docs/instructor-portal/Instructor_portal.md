@@ -1,7 +1,7 @@
 # ShijlAI Academy — Instructor Portal: Complete Implementation Documentation
 
 > **AI-Powered Course Creation & Teaching Intelligence Platform**
-> Authors: Sadeed Ali [1447], Syed Awais Shah [1457]
+> Authors: Tanzeel Ur Rahman, Israr Ullah
 > University of Malakand — Department of Computer Science & IT
 
 ---

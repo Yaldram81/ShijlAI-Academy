@@ -2,7 +2,7 @@
 
 > **Complete Feature Catalog** | Version 2.0 | Last Updated: 2025-03-04
 > **Platform**: ShijlAI Academy — AI-Powered E-Learning Platform
-> **Authors**: Sadeed Ali [1447], Syed Awais Shah [1457]
+> **Authors**: Tanzeel Ur Rahman, Israr Ullah
 > **University of Malakand — Department of Computer Science & IT**
 
 ---
